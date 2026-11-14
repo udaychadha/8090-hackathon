@@ -120,3 +120,24 @@ Frozen spec SHA256 values:
 
 - All: `5c7ee2d1418ac7364981042433348eb04085c263a7b7d71cdbbe054349eb2c60`
 - Committee: `d0d2c16764f8430e0bf55b6a1f6adf9829c5ec2d70f58dfa15b3418af0324bce`
+
+## Live progress correction — November 14, 14:19 PT
+
+A and B have finished computation, with retained IS/OOS activity and boundaries;
+C is in the five-eval harness. Final eval records remain unpublished until the
+shared trial-cohort judgment. This is not a completed experiment.
+
+Branch `codex/run-progress` distinguishes `awaiting_judgment` from
+`awaiting_results` in the API and replaces misleading RUNNING lane badges with
+neutral progress badges. A terminal parent with a stale RUNNING child shows
+"Run ended". Authoritative status, eval counts and outcomes are unchanged.
+Future executions emit an existing-schema neutral completion event; the current
+legacy process is supported by retained completion artifacts and was not restarted.
+
+The local API was restarted as exec session `26389` on port 8000. The normal
+arena PID, diagnostic replay PIDs and resumption instructions above still apply.
+Real API/browser proof is in `report/run-progress-ui/proof.json`, with eight
+desktop/mobile screenshots in both themes. The browser made no write requests.
+The correction passed 42 targeted backend tests, all 42 frontend tests, the
+production frontend build, formatting and lint. Eval config's protected hash is
+unchanged. These checks establish the progress fix, not experiment completion.

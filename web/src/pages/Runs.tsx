@@ -34,6 +34,7 @@ import {
   StepPipeline,
   Unavailable,
   VariantCard,
+  VariantStatus,
 } from "../components/common";
 
 export function RunPage() {
@@ -364,7 +365,7 @@ function RunDetailPage({
                       <span className="caption">
                         {v.test_type} · {v.evals_passed}/5
                       </span>
-                      <StatusPill status={v.status} />
+                      <VariantStatus variant={v} parentStatus={run.status} />
                     </>
                   ) : (
                     <span className="caption">
@@ -381,6 +382,7 @@ function RunDetailPage({
                 <VariantCard
                   key={v.variant_id}
                   variant={v}
+                  parentStatus={run.status}
                   audit={audit}
                   onSelect={() => setLane(v.variant)}
                 />
@@ -413,7 +415,11 @@ function RunDetailPage({
             </>
           ) : selected ? (
             <>
-              <VariantCard variant={selected} audit={audit} />
+              <VariantCard
+                variant={selected}
+                parentStatus={run.status}
+                audit={audit}
+              />
               <section className="card">
                 <h2>{laneNames[selected.variant]} · steps &amp; repairs</h2>
                 <p className="muted">

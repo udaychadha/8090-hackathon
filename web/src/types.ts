@@ -11,11 +11,21 @@ export interface Event {
   message: string;
   data: ObjectData;
 }
+export type StepState =
+  | "pending"
+  | "running"
+  | "pass"
+  | "failed"
+  | "recorded"
+  | "fixed"
+  | "not_run"
+  | "awaiting_results"
+  | "awaiting_judgment";
 export interface Step {
   id: string;
   kind: string;
   label: string;
-  state: string;
+  state: StepState;
   number: number | null;
   attempts: number;
   max_attempts: number | null;

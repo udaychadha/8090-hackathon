@@ -1,0 +1,97 @@
+{
+  "at": "2026-11-14T22:19:13.379Z",
+  "run_id": "r_587be5f49c30",
+  "source": "Real local API; no substituted records",
+  "checks": [
+    {
+      "width": 1440,
+      "theme": "dark",
+      "layout": {
+        "width": 1440,
+        "scroll_width": 1440
+      },
+      "labels_match_real_progress": true
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "layout": {
+        "width": 1440,
+        "scroll_width": 1440
+      },
+      "labels_match_real_progress": true
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "layout": {
+        "width": 390,
+        "scroll_width": 390
+      },
+      "labels_match_real_progress": true
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "layout": {
+        "width": 390,
+        "scroll_width": 390
+      },
+      "labels_match_real_progress": true
+    }
+  ],
+  "screenshots": [
+    "1440-dark-overview.png",
+    "1440-dark-lane-A.png",
+    "1440-light-overview.png",
+    "1440-light-lane-A.png",
+    "390-dark-overview.png",
+    "390-dark-lane-A.png",
+    "390-light-overview.png",
+    "390-light-lane-A.png"
+  ],
+  "errors": [],
+  "writes": [],
+  "variants": [
+    {
+      "variant": "A",
+      "status": "RUNNING",
+      "evals_passed": 0,
+      "summary": "Computation complete; awaiting final judgment.",
+      "eval_states": [
+        "awaiting_judgment",
+        "awaiting_judgment",
+        "awaiting_judgment",
+        "awaiting_judgment",
+        "awaiting_judgment"
+      ]
+    },
+    {
+      "variant": "B",
+      "status": "RUNNING",
+      "evals_passed": 0,
+      "summary": "Computation complete; awaiting final judgment.",
+      "eval_states": [
+        "awaiting_judgment",
+        "awaiting_judgment",
+        "awaiting_judgment",
+        "awaiting_judgment",
+        "awaiting_judgment"
+      ]
+    },
+    {
+      "variant": "C",
+      "status": "RUNNING",
+      "evals_passed": 0,
+      "summary": "Work is in progress; 0/5 evaluations recorded as passed.",
+      "eval_states": [
+        "awaiting_results",
+        "awaiting_results",
+        "awaiting_results",
+        "awaiting_results",
+        "awaiting_results"
+      ]
+    }
+  ],
+  "passed": true
+}

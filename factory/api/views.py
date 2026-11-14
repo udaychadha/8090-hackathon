@@ -7,8 +7,36 @@ from factory.api.schemas import DataNeed, LeaderboardRow, RunSummary
 EVAL_NAMES = {1: "Lookahead", 2: "Friction", 3: "Sensitivity", 4: "Decay", 5: "Deflated Sharpe"}
 
 
-def summary(row):
+COMPUTATION_COMPLETE_EVENT = "Variant computation complete; awaiting final judgment"
+
+
+def computation_complete(row, events=()):
+    """Completion evidence describes execution only, never an eval outcome."""
+    if any(
+        event["stage"] == "eval"
+        and event["status"] == "info"
+        and event["variant"] == row["variant"]
+        and event["message"] == COMPUTATION_COMPLETE_EVENT
+        for event in events
+    ):
+        return True
+    activity = row.get("activity") or {}
+    boundaries = row.get("equity_boundaries") or {}
+    return all(activity.get(period) for period in ("IS", "OOS")) and all(
+        boundaries.get(key) for key in ("is_end", "oos_end")
+    )
+
+
+def summary(row, *, run=None, events=()):
     status, count = row["status"], row["evals_passed"]
+    if status == "RUNNING":
+        if run is not None and run["status"] != "RUNNING":
+            return (
+                "Run ended before final evaluation results were published; "
+                f"{count}/5 evaluations recorded as passed."
+            )
+        if computation_complete(row, events):
+            return "Computation complete; awaiting final judgment."
     if status == "VERIFIED":
         return "All five deterministic evaluations passed."
     if status.startswith("FAILED_EVAL_"):
@@ -27,11 +55,11 @@ def summary(row):
     }[status]
 
 
-def leaderboard_row(row):
+def leaderboard_row(row, *, run=None, events=()):
     fields = set(LeaderboardRow.model_fields) - {"summary"}
     projected = {key: row.get(key) for key in fields}
     projected["notes"] = row.get("notes", [])
-    projected["summary"] = summary(row)
+    projected["summary"] = summary(row, run=run, events=events)
     return projected
 
 
@@ -208,6 +236,7 @@ def variant_steps(row, run, events, evals, heals, critique):
         )
     by_number = {e["number"]: e for e in evals}
     harness_started = any(e["stage"] == "eval" and e["status"] == "started" for e in events)
+    completed = computation_complete(row, events)
     for number in range(1, 6):
         logs = [
             e
@@ -221,8 +250,16 @@ def variant_steps(row, run, events, evals, heals, critique):
             state = "pass" if result["passed"] else "failed"
             details = metric_details(result)
         else:
-            state = "not_run" if terminal else ("running" if harness_started else "pending")
-            details = ["No completed eval result was recorded."] if terminal else []
+            if terminal:
+                state, details = "not_run", ["No completed eval result was recorded."]
+            elif completed:
+                state = "awaiting_judgment"
+                details = ["Computation complete; awaiting final judgment"]
+            elif harness_started:
+                state = "awaiting_results"
+                details = ["Harness active; individual outcomes not yet published."]
+            else:
+                state, details = "pending", []
         steps.append(
             _step(
                 f"{lane}-eval-{number}",
@@ -263,7 +300,7 @@ def run_summary(run, records, *, include_voided=False, events=None):
     rows = records.list("variants", run_id=run["run_id"], include_voided=include_voided)
     fields = set(RunSummary.model_fields) - {"variants", "data_needs", "started_at"}
     value = {key: run.get(key) for key in fields}
-    value["variants"] = [leaderboard_row(row) for row in rows]
+    value["variants"] = [leaderboard_row(row, run=run, events=events) for row in rows]
     needs = records.list("data_needs", run_id=run["run_id"], include_voided=include_voided)
     value["data_needs"] = [{key: need[key] for key in DataNeed.model_fields} for need in needs]
     value["started_at"] = min((event["ts"] for event in events), default=None)

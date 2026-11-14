@@ -506,6 +506,14 @@ from those rows. Source records contain the current extraction, while RunDetail
 retains the exact historical spec snapshot. All default-profile rows expose
 `profile="default"`, `default_status` and `default_evals_passed` without rejudging.
 
+Live progress is separate from authoritative status. A generic harness-start
+event does not prove that each eval is currently executing; unpublished checks
+show `awaiting_results`. A completed lane awaiting the shared trial-cohort judgment
+shows `awaiting_judgment`, based on an explicit completion event or the retained
+IS/OOS activity and boundary artifacts written only after evaluation returns.
+Its summary says computation is complete while final judgment is pending. Final
+pass/fail and eval counts remain unchanged until their records are published.
+
 ```
 RunSummary = {
   "run_id", "status", "source": Source|null,
@@ -529,7 +537,8 @@ VariantRun = LeaderboardRow + {"steps":[Step]}
 Step = {
   "id":string, "kind":"extract"|"data"|"code"|"heal"|"eval"|"critic",
   "label":string,
-  "state":"pending"|"running"|"pass"|"failed"|"recorded"|"fixed"|"not_run",
+  "state":"pending"|"running"|"pass"|"failed"|"recorded"|"fixed"|"not_run"
+          |"awaiting_results"|"awaiting_judgment",
   "number":int|null, "attempts":int, "max_attempts":int|null,
   "details":[string], "logs":[Event]
 }

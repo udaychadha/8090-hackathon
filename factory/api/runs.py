@@ -133,7 +133,9 @@ def run_detail(request: Request, run_id: str, include_voided: bool = False):
             *_, steps = views.lane_evidence(
                 row, run, records, include_voided=include_voided, events=events
             )
-            detail["variants"].append({**views.leaderboard_row(row), "steps": steps})
+            detail["variants"].append(
+                {**views.leaderboard_row(row, run=run, events=events), "steps": steps}
+            )
         detail.update(
             steps=views.run_steps(run, events),
             usage=run.get("usage", []),
@@ -205,7 +207,21 @@ def leaderboard(
                 )
                 + missing
             )
-        return response(schemas.Leaderboard, {"rows": [views.leaderboard_row(row) for row in rows]})
+        return response(
+            schemas.Leaderboard,
+            {
+                "rows": [
+                    views.leaderboard_row(
+                        row,
+                        run=records.get("runs", row["run_id"], include_voided=include_voided),
+                        events=records.events(row["run_id"], include_voided=include_voided)
+                        if row["status"] == "RUNNING"
+                        else (),
+                    )
+                    for row in rows
+                ]
+            },
+        )
 
 
 @router.get(
@@ -218,11 +234,12 @@ def variant_detail(request: Request, variant_id: str, include_voided: bool = Fal
     with get_records(root) as records:
         row = required(records, "variants", variant_id, include_voided)
         run = required(records, "runs", row["run_id"], include_voided)
+        events = records.events(row["run_id"], include_voided=include_voided)
         evals, heals, critique, steps = views.lane_evidence(
-            row, run, records, include_voided=include_voided
+            row, run, records, include_voided=include_voided, events=events
         )
         value = {
-            **views.leaderboard_row(row),
+            **views.leaderboard_row(row, run=run, events=events),
             **{
                 key: row.get(key)
                 for key in (

@@ -5,6 +5,7 @@ import {
   auditSuffix,
   formatNumber,
   human,
+  isTerminal,
   laneDescriptions,
   laneNames,
 } from "../evidence";
@@ -218,11 +219,62 @@ export function LogList({ events }: { events: Event[] }) {
     <Empty>No retained events for this step.</Empty>
   );
 }
+const stepStateLabel = (state: string) =>
+  state === "awaiting_judgment"
+    ? "Awaiting final judgment"
+    : state === "awaiting_results"
+      ? "Awaiting results"
+      : human(state);
+
+function variantProgressLabel(variant: VariantRun): string | null {
+  if (variant.status !== "RUNNING") return null;
+  const state = ["awaiting_judgment", "awaiting_results"].find((state) =>
+    variant.steps.some((step) => step.state === state),
+  );
+  return state ? stepStateLabel(state) : null;
+}
+
+export function VariantStatus({
+  variant,
+  parentStatus,
+}: {
+  variant: VariantRun;
+  parentStatus?: string;
+}) {
+  if (
+    variant.status === "RUNNING" &&
+    parentStatus &&
+    isTerminal(parentStatus)
+  ) {
+    return (
+      <span
+        className="pill"
+        title="The parent run has ended; no final variant verdict was recorded."
+      >
+        Run ended
+      </span>
+    );
+  }
+  const progress = variantProgressLabel(variant);
+  return progress ? (
+    <span
+      className="pill"
+      title="The run remains active; no final judgment has been published."
+    >
+      {progress}
+    </span>
+  ) : (
+    <StatusPill status={variant.status} />
+  );
+}
+
 export function StepPipeline({ steps }: { steps: Step[] }) {
   const [selected, setSelected] = useState<string | null>(null);
   const step =
     steps.find((item) => item.id === selected) ??
     steps.find((item) => item.state === "running") ??
+    steps.find((item) => item.state === "awaiting_judgment") ??
+    steps.find((item) => item.state === "awaiting_results") ??
     steps.find((item) => item.state === "failed") ??
     steps[0];
   if (!step) return <Empty>No steps were recorded.</Empty>;
@@ -252,7 +304,7 @@ export function StepPipeline({ steps }: { steps: Step[] }) {
             </span>
             <strong>{item.label}</strong>
             <span className="caption">
-              {human(item.state)}
+              {stepStateLabel(item.state)}
               {item.kind === "heal" && item.attempts
                 ? ` ${item.attempts}/${item.max_attempts ?? 3}`
                 : ""}
@@ -266,7 +318,7 @@ export function StepPipeline({ steps }: { steps: Step[] }) {
       >
         <div className="row between step-detail-heading">
           <strong>{step.label}</strong>
-          <Chip>{human(step.state)}</Chip>
+          <Chip>{stepStateLabel(step.state)}</Chip>
         </div>
         <div className="step-details">
           {step.details.map((line, i) => (
@@ -284,10 +336,12 @@ export function StepPipeline({ steps }: { steps: Step[] }) {
 }
 export function VariantCard({
   variant,
+  parentStatus,
   audit = false,
   onSelect,
 }: {
   variant: VariantRun;
+  parentStatus?: string;
   audit?: boolean;
   onSelect?: () => void;
 }) {
@@ -327,7 +381,7 @@ export function VariantCard({
           results={evals}
           verified={variant.status === "VERIFIED"}
         />
-        <StatusPill status={variant.status} />
+        <VariantStatus variant={variant} parentStatus={parentStatus} />
         <Link
           className="caption"
           to={`/variants/${variant.variant_id}${auditSuffix(audit)}`}

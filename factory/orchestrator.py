@@ -288,6 +288,14 @@ def run_paper(
                         _save_row(records, row)
 
                     evaluation = evaluate_file(path, data_root, on_eval2_started=mark_eval2_started)
+                    records.event(
+                        run_id,
+                        "eval",
+                        "info",
+                        "Variant computation complete; awaiting final judgment",
+                        variant=variant,
+                        data={},
+                    )
                     reports[variant] = evaluation.report
                     gross_by_variant[variant] = evaluation.gross_diagnostics
                     row["equity"] = evaluation.equity

@@ -50,7 +50,17 @@ class Step(Response):
     id: str
     kind: Literal["extract", "data", "code", "heal", "eval", "critic"]
     label: str
-    state: Literal["pending", "running", "pass", "failed", "recorded", "fixed", "not_run"]
+    state: Literal[
+        "pending",
+        "running",
+        "pass",
+        "failed",
+        "recorded",
+        "fixed",
+        "not_run",
+        "awaiting_results",
+        "awaiting_judgment",
+    ]
     number: int | None = None
     attempts: int = 0
     max_attempts: int | None = None
