@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 import builtins
 import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -17,9 +18,9 @@ from typing import Annotated, Literal
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from factory.data import OHLCV, DataError, Frequency, validate_symbol
+from factory.data import OHLCV, DataError, EventBars, Frequency, validate_symbol
 from factory.data_contract.generated import SPEC
 
 
@@ -73,8 +74,24 @@ class StrategySpec(BaseModel):
     frequency: Frequency
     signal_rules: list[str] = Field(min_length=1)
     claimed_metrics: ClaimedMetrics
-    ambiguities: list[str] = Field(min_length=1)
-    test_type: Literal["replication", "transfer"]
+    ambiguities: list[str]
+    test_type: Literal["replication", "transfer", "original"]
+    source_kind: Literal["paper", "described"] = "paper"
+    extra: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+    verification_eligible: bool = True
+    eligibility_reason: str | None = None
+
+    @model_validator(mode="after")
+    def paper_ambiguities(self):
+        if self.source_kind == "paper" and not self.ambiguities:
+            raise ValueError("Paper specifications require at least one ambiguity")
+        return self
+
+    @field_validator("extra")
+    @classmethod
+    def valid_extra(cls, value):
+        return list(validate_extra_names(value))
 
     @field_validator("universe")
     @classmethod
@@ -97,6 +114,18 @@ class StrategyDefinition:
     frequency: Frequency
     universe: tuple[str, ...]
     params: dict
+    extra: tuple[str, ...] = ()
+
+
+def validate_extra_names(names) -> tuple[str, ...]:
+    if not isinstance(names, list) or any(
+        not isinstance(name, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,127}", name)
+        for name in names
+    ):
+        raise ContractViolation("EXTRA must be a literal list of safe dataset names")
+    if len(names) != len(set(names)):
+        raise ContractViolation("EXTRA dataset names must be unique")
+    return tuple(names)
 
 
 SAFE_BUILTINS = {
@@ -375,9 +404,9 @@ def parse_strategy(
             and isinstance(node.targets[0], ast.Name)
         ):
             key = node.targets[0].id
-            if key not in {"FREQUENCY", "UNIVERSE", "PARAMS"} or key in metadata:
+            if key not in {"FREQUENCY", "UNIVERSE", "PARAMS", "EXTRA"} or key in metadata:
                 raise ContractViolation(
-                    "Only one literal FREQUENCY, UNIVERSE and PARAMS assignment is allowed"
+                    "Only one literal FREQUENCY, UNIVERSE, PARAMS and optional EXTRA is allowed"
                 )
             try:
                 metadata[key] = ast.literal_eval(node.value)
@@ -393,7 +422,10 @@ def parse_strategy(
             functions.add(node.name)
         else:
             raise ContractViolation(f"Unsupported module-level statement at line {node.lineno}")
-    if set(metadata) != {"FREQUENCY", "UNIVERSE", "PARAMS"} or "generate_signals" not in functions:
+    if (
+        not {"FREQUENCY", "UNIVERSE", "PARAMS"} <= set(metadata)
+        or "generate_signals" not in functions
+    ):
         raise ContractViolation(
             "Define FREQUENCY, UNIVERSE, PARAMS and generate_signals(bars, params)"
         )
@@ -411,6 +443,7 @@ def parse_strategy(
         raise ContractViolation("UNIVERSE must have unique symbols")
     if available_universe is not None and not set(universe) <= set(available_universe):
         raise ContractViolation("UNIVERSE is not a subset of the tier")
+    extra = validate_extra_names(metadata.get("EXTRA", []))
     params = validate_params(metadata["PARAMS"])
     parameter_nodes = set(ast.walk(parameter_node))
     for node in ast.walk(tree):
@@ -479,15 +512,25 @@ def parse_strategy(
         if isinstance(node, ast.FunctionDef) and node.name == "generate_signals":
             args = node.args
             if (
-                [arg.arg for arg in args.args] != ["bars", "params"]
+                [arg.arg for arg in args.args]
+                != (["bars", "params", "extra"] if "EXTRA" in metadata else ["bars", "params"])
                 or args.posonlyargs
                 or args.kwonlyargs
                 or args.vararg
                 or args.kwarg
-                or args.defaults
+                or (
+                    "EXTRA" in metadata
+                    and not (
+                        len(args.defaults) == 1
+                        and isinstance(args.defaults[0], ast.Constant)
+                        and args.defaults[0].value is None
+                    )
+                )
+                or ("EXTRA" not in metadata and args.defaults)
             ):
-                raise ContractViolation("Use exactly generate_signals(bars, params)")
-    return StrategyDefinition(source, metadata["FREQUENCY"], tuple(universe), params)
+                signature = "bars, params, extra=None" if "EXTRA" in metadata else "bars, params"
+                raise ContractViolation(f"Use exactly generate_signals({signature})")
+    return StrategyDefinition(source, metadata["FREQUENCY"], tuple(universe), params, extra)
 
 
 def read_strategy(path: Path | str, **kwargs) -> StrategyDefinition:
@@ -519,7 +562,11 @@ def validate_bars(bars: dict[str, pd.DataFrame]) -> pd.DatetimeIndex:
             validate_symbol(symbol)
         except DataError as error:
             raise ContractViolation(str(error)) from error
-        if not isinstance(frame, pd.DataFrame) or frame.empty or not set(OHLCV) <= set(frame):
+        if (
+            not isinstance(frame, pd.DataFrame)
+            or (frame.empty and not isinstance(bars, EventBars))
+            or not set(OHLCV) <= set(frame)
+        ):
             raise ContractViolation(f"{symbol}: require nonempty OHLCV DataFrame")
         if any(
             not pd.api.types.is_numeric_dtype(frame[column])
@@ -549,6 +596,8 @@ def validate_bars(bars: dict[str, pd.DataFrame]) -> pd.DatetimeIndex:
         ).any():
             raise ContractViolation(f"{symbol}: inconsistent OHLC")
         index = index.union(current)
+    if index.empty:
+        raise ContractViolation("bars must contain at least one observed timestamp")
     return index.sort_values()
 
 

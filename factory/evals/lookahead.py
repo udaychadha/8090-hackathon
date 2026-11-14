@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from factory.data import EventBars
 from factory.evals import config
 from factory.evals.common import EvalError, EvalResult, StrategyRunner
 
@@ -35,9 +36,11 @@ def union_index(bars: dict[str, pd.DataFrame]) -> pd.DatetimeIndex:
 def truncate_bars(bars: dict[str, pd.DataFrame], last: pd.Timestamp) -> dict[str, pd.DataFrame]:
     cut = {symbol: frame.loc[:last] for symbol, frame in bars.items()}
     empty = [symbol for symbol, frame in cut.items() if frame.empty]
-    if empty:
+    if empty and not isinstance(bars, EventBars):
         raise EvalError(f"No bars before the lookahead cut {last.isoformat()} for {empty}")
-    return cut
+    if len(empty) == len(cut):
+        raise EvalError(f"No observed bars before the lookahead cut {last.isoformat()}")
+    return EventBars(cut) if isinstance(bars, EventBars) else cut
 
 
 def first_difference(full: pd.DataFrame, truncated: pd.DataFrame, tolerance: float):

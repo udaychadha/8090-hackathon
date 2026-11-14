@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { formatNumber, human, shortDate } from "../evidence";
@@ -132,7 +132,10 @@ function Catalog({ scope, audit }: { scope: Scope; audit: boolean }) {
   const datasets = resource.data?.datasets ?? [];
   const filtered = datasets.filter(
     (dataset) =>
-      (!frequency || dataset.frequency === frequency) &&
+      (!frequency ||
+        (frequency === "events"
+          ? dataset.kind === "events"
+          : dataset.frequency === frequency)) &&
       `${dataset.name} ${dataset.symbols.join(" ")} ${dataset.source}`
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -191,6 +194,7 @@ function Catalog({ scope, audit }: { scope: Scope; audit: boolean }) {
                 }}
               >
                 <option value="">All tiers</option>
+                <option value="events">Events</option>
                 {[
                   ...new Set(
                     datasets
@@ -324,22 +328,17 @@ function Catalog({ scope, audit }: { scope: Scope; audit: boolean }) {
       </div>
       <div className="two-col">
         <div className="stack-lg">
-          <section className="card">
-            <h2>Upload event CSV</h2>
-            <div className="upload-zone">
-              <span aria-hidden="true">↥</span>
-              <p>Dated event data</p>
-              <Unavailable label="Choose CSV file" />
-            </div>
-            <div className="row">
-              <Chip>symbol</Chip>
-              <Chip>available_at required</Chip>
-            </div>
-            <p className="muted">
-              Event uploads and column mapping are not available yet. Every
-              event dataset must state when the information became available.
-            </p>
-          </section>
+          {scope === "main" && (
+            <EventUpload
+              onUploaded={async (dataset) => {
+                await resource.reload();
+                setSelectedId(dataset.id);
+                setQuery("");
+                setFrequency("events");
+                setPage(0);
+              }}
+            />
+          )}
           <Providers />
         </div>
         <section className="card">
@@ -359,6 +358,139 @@ function Catalog({ scope, audit }: { scope: Scope; audit: boolean }) {
         </section>
       </div>
     </>
+  );
+}
+
+export function EventUpload({
+  onUploaded,
+}: {
+  onUploaded: (dataset: Dataset) => Promise<void>;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [name, setName] = useState("");
+  const [availability, setAvailability] = useState("available_at");
+  const [symbol, setSymbol] = useState("symbol");
+  const [extraMapping, setExtraMapping] = useState("{}");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!file || busy) return;
+    setError(null);
+    setSuccess(null);
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Event CSV exceeds 10 MiB.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const extra = JSON.parse(extraMapping);
+      if (
+        !extra ||
+        typeof extra !== "object" ||
+        Array.isArray(extra) ||
+        Object.values(extra).some((value) => typeof value !== "string")
+      ) {
+        throw new Error(
+          "Additional mappings must be a JSON object of destination names to CSV column names.",
+        );
+      }
+      const dataset = await api.uploadEvents(file, name, {
+        ...extra,
+        available_at: availability,
+        symbol,
+      });
+      await onUploaded(dataset);
+      setSuccess(
+        `Stored ${dataset.name}: ${dataset.rows.toLocaleString()} events. Unverified source.`,
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Event upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="card">
+      <h2>Upload event CSV</h2>
+      <form className="stack" onSubmit={(event) => void submit(event)}>
+        <label className="upload-zone">
+          Event CSV · UTF-8 · maximum 10 MiB
+          <input
+            aria-label="Event CSV file"
+            type="file"
+            accept=".csv,text/csv"
+            required
+            disabled={busy}
+            onChange={(event) => {
+              setFile(event.target.files?.[0] ?? null);
+              setSuccess(null);
+            }}
+          />
+        </label>
+        <label>
+          Dataset name
+          <input
+            aria-label="Event dataset name"
+            required
+            pattern="[A-Za-z][A-Za-z0-9_]{0,127}"
+            value={name}
+            disabled={busy}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="my_events"
+          />
+        </label>
+        <label>
+          Availability column
+          <input
+            aria-label="Availability column"
+            required
+            value={availability}
+            disabled={busy}
+            onChange={(event) => setAvailability(event.target.value)}
+          />
+        </label>
+        <label>
+          Symbol column
+          <input
+            aria-label="Symbol column"
+            required
+            value={symbol}
+            disabled={busy}
+            onChange={(event) => setSymbol(event.target.value)}
+          />
+        </label>
+        <details>
+          <summary>Additional column mappings</summary>
+          <p className="caption">
+            Optional JSON: destination field to CSV column. Unmapped scalar
+            fields are preserved; field names must use letters, digits and
+            underscores.
+          </p>
+          <textarea
+            aria-label="Additional column mappings"
+            value={extraMapping}
+            disabled={busy}
+            onChange={(event) => setExtraMapping(event.target.value)}
+          />
+        </details>
+        <p className="muted">
+          available_at must include time and timezone, for example
+          2024-06-03T14:00:00Z. A transaction date does not establish
+          availability. Existing names cannot be overwritten.
+        </p>
+        <button type="submit" disabled={busy || !file || !name}>
+          {busy ? "Validating and saving…" : "Upload event data"}
+        </button>
+        {error && (
+          <p role="alert" className="notice">
+            {error}
+          </p>
+        )}
+        {success && <p role="status">{success}</p>}
+      </form>
+    </section>
   );
 }
 
@@ -409,15 +541,44 @@ function DatasetPanel({
           retry={() => void preview.reload()}
         />
       ) : preview.loading ? (
-        <Loading label="Validating and loading visible price observations…" />
+        <Loading label="Validating and loading visible observations…" />
       ) : (
         preview.data && (
           <>
-            <DatasetChart preview={preview.data} title={dataset.name} />
+            {dataset.kind === "events" ? (
+              <div className="table-wrap">
+                {preview.data.rows.length ? (
+                  <table>
+                    <thead>
+                      <tr>
+                        {Object.keys(preview.data.rows[0]).map((key) => (
+                          <th key={key}>{key}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.data.rows.map((row, index) => (
+                        <tr key={index}>
+                          {Object.keys(preview.data!.rows[0]).map((key) => (
+                            <td className="mono" key={key}>
+                              {text(row[key])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <Empty>No events are available in this split.</Empty>
+                )}
+              </div>
+            ) : (
+              <DatasetChart preview={preview.data} title={dataset.name} />
+            )}
             <p className="caption">
               {preview.data.rows.length}{" "}
               {preview.data.downsampled ? "downsampled" : "retained"}{" "}
-              observations shown. HOLDOUT is sealed; no HOLDOUT prices are
+              observations shown. HOLDOUT is sealed; no HOLDOUT observations are
               returned.
             </p>
             <div className="spec-field">
@@ -430,41 +591,57 @@ function DatasetPanel({
                 <span>Observed rows</span>
                 <span className="mono">{count(coverage?.observed_rows)}</span>
               </div>
-              <div className="row between">
-                <span>Expected rows</span>
-                <span className="mono">{count(coverage?.expected_rows)}</span>
-              </div>
-              <div className="row between">
-                <span>Missing rows</span>
-                <span className="mono">{count(coverage?.missing_rows)}</span>
-              </div>
-              <div className="row between">
-                <span>Locally filled rows</span>
-                <span className="mono">{count(coverage?.filled_rows)}</span>
-              </div>
-              <p className="caption">
-                Denominator: {text(coverage?.fill_rate_denominator)}.
-              </p>
-            </div>
-            <details>
-              <summary>
-                Gap intervals ({preview.data.total_gaps.toLocaleString()})
-              </summary>
-              {preview.data.gaps.length ? (
+              {dataset.kind === "price_bars" && (
                 <>
+                  <div className="row between">
+                    <span>Expected rows</span>
+                    <span className="mono">
+                      {count(coverage?.expected_rows)}
+                    </span>
+                  </div>
+                  <div className="row between">
+                    <span>Missing rows</span>
+                    <span className="mono">
+                      {count(coverage?.missing_rows)}
+                    </span>
+                  </div>
+                  <div className="row between">
+                    <span>Locally filled rows</span>
+                    <span className="mono">{count(coverage?.filled_rows)}</span>
+                  </div>
                   <p className="caption">
-                    Showing {preview.data.gaps.length.toLocaleString()} of{" "}
-                    {preview.data.total_gaps.toLocaleString()} recorded
-                    intervals in this split.
+                    Denominator: {text(coverage?.fill_rate_denominator)}.
                   </p>
-                  <JsonBlock value={preview.data.gaps} />
                 </>
-              ) : (
-                <p className="muted">
-                  No missing intervals in the selected session grid.
+              )}
+              {dataset.kind === "events" && (
+                <p className="caption">
+                  Availability is determined by available_at. Events have no
+                  expected price grid or inferred gaps.
                 </p>
               )}
-            </details>
+            </div>
+            {dataset.kind === "price_bars" && (
+              <details>
+                <summary>
+                  Gap intervals ({preview.data.total_gaps.toLocaleString()})
+                </summary>
+                {preview.data.gaps.length ? (
+                  <>
+                    <p className="caption">
+                      Showing {preview.data.gaps.length.toLocaleString()} of{" "}
+                      {preview.data.total_gaps.toLocaleString()} recorded
+                      intervals in this split.
+                    </p>
+                    <JsonBlock value={preview.data.gaps} />
+                  </>
+                ) : (
+                  <p className="muted">
+                    No missing intervals in the selected session grid.
+                  </p>
+                )}
+              </details>
+            )}
             <details>
               <summary>
                 Visible observation rows ({preview.data.rows.length})
@@ -479,10 +656,12 @@ function DatasetPanel({
         <p className="mono">
           {dataset.rows.toLocaleString()} rows · {dataset.adjustment} adjustment
         </p>
-        <p className="muted">
-          Locally filled rows / full expected session grid:{" "}
-          {formatNumber(dataset.fill_rate * 100, 4)}%.
-        </p>
+        {dataset.kind === "price_bars" && (
+          <p className="muted">
+            Locally filled rows / full expected session grid:{" "}
+            {formatNumber(dataset.fill_rate * 100, 4)}%.
+          </p>
+        )}
         <p className="caption">
           Schema {dataset.schema_version} · {dataset.source}
         </p>

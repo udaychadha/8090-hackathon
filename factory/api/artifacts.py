@@ -195,6 +195,28 @@ class ArtifactRegistry:
                 continue
             add(path.relative_to(self.root), "strategy_code", run_ids=[run_id], source_id=source_id)
 
+        for source_id in ("congress_all", "congress_committee"):
+            add(
+                f"specs/{source_id}.json",
+                "source_spec",
+                source_id=source_id,
+                run_ids=[
+                    key
+                    for key, run in runs.items()
+                    if (run.get("source") or {}).get("source_id") == source_id
+                ],
+            )
+        for filename in (
+            "wo12-source-audit.md",
+            "wo12-source-audit.json",
+            "wo12-committee-audit.md",
+            "wo12-committee-audit.json",
+            "wo12-runs.json",
+            "wo12-results.md",
+            "wo12-proof.json",
+        ):
+            add(f"report/{filename}", "report", notes=["Owner-approved WO-12 event-data evidence."])
+
         add(
             "runs/factory.db",
             "record_database",
@@ -347,6 +369,17 @@ class ArtifactRegistry:
                         "ingest_metadata",
                         dataset_id=dataset_id,
                     )
+            for path in sorted((self.root / directory / "events").glob("*.manifest.json")):
+                name = path.name.removesuffix(".manifest.json")
+                if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,127}", name):
+                    continue
+                dataset_id = dataset_identifier(scope, "events", name)
+                add(
+                    path.relative_to(self.root),
+                    "dataset_manifest",
+                    dataset_id=dataset_id,
+                    notes=["unverified source; raw event data is not an artifact download"],
+                )
         return items, voided
 
     def list(self, run_id=None, source_id=None, dataset_id=None, include_voided=False):

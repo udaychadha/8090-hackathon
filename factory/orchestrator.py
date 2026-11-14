@@ -14,7 +14,7 @@ from factory.agents.critic import critique
 from factory.agents.extractor import ExtractionError, extract, paper_metadata
 from factory.agents.records import Records, usage_record
 from factory.agents.worker import VARIANTS, RepairFailure, propose_parallel, validate_and_heal
-from factory.contract import InactiveStrategy
+from factory.contract import InactiveStrategy, StrategySpec
 from factory.data import DataError, load_bars
 from factory.data_contract.prompts import worker_context
 from factory.evals.runner import with_deflated
@@ -25,7 +25,18 @@ from factory.trials import trial_cohort
 SURVIVORSHIP = "Daily universe uses current index membership; results carry survivorship bias."
 
 
-def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
+def run_spec(spec, *, data_root="data", output_root=".", run_id=None):
+    """Run a frozen, owner-supplied original specification through the same arena."""
+    payload = spec.model_dump() if isinstance(spec, StrategySpec) else spec
+    validated = StrategySpec.model_validate(payload)
+    if validated.source_kind != "described" or validated.test_type != "original":
+        raise ValueError("Handwritten specifications must be described/original")
+    return run_paper(
+        None, data_root=data_root, output_root=output_root, run_id=run_id, supplied_spec=validated
+    )
+
+
+def run_paper(paper, *, data_root="data", output_root=".", run_id=None, supplied_spec=None):
     started = time.perf_counter()
     root = Path(output_root)
     run_id = run_id or ("r_" + uuid.uuid4().hex[:12])
@@ -39,32 +50,57 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
     summary = summary or {"run_id": run_id, "status": "RUNNING", "variants": [], "data_needs": []}
     summary = records.put("runs", run_id, run_id, summary)
     try:
-        for role in ("extractor", "worker", "critic"):
+        for role in (
+            ("extractor", "worker", "critic") if supplied_spec is None else ("worker", "critic")
+        ):
             model_for(role)
-        records.event(run_id, "extract", "started", "Extracting owner-supplied paper")
-        spec, usage = extract(paper, data_root=data_root)
-        usages.append(usage_record(usage))
+        if supplied_spec is None:
+            records.event(run_id, "extract", "started", "Extracting owner-supplied paper")
+            spec, usage = extract(paper, data_root=data_root)
+            usages.append(usage_record(usage))
+        else:
+            spec = supplied_spec
+            records.event(
+                run_id, "intake", "passed", "Frozen owner-supplied specification validated"
+            )
         source = {
             "source_id": spec.paper_id,
             "title": spec.title,
-            "source_kind": "paper",
+            "source_kind": spec.source_kind,
             "spec": spec.model_dump(),
-            "provenance": paper_metadata(paper).get("source", {}),
+            "provenance": paper_metadata(paper).get("source", {}) if paper is not None else {},
         }
         source = records.put("sources", spec.paper_id, run_id, source)
         summary["source"] = source
         summary = records.put("runs", run_id, run_id, summary)
-        records.event(run_id, "extract", "passed", "StrategySpec validated")
-        records.event(run_id, "data", "started", "Checking existing price data only")
+        if supplied_spec is None:
+            records.event(run_id, "extract", "passed", "StrategySpec validated")
+        records.event(run_id, "data", "started", "Checking required local datasets")
+        missing_kind, missing_name = "price_bars", "Required local price bars"
+        extra = None
         try:
-            is_bars = load_bars(data_root, spec.frequency, spec.universe, split="IS")
+            is_bars = load_bars(
+                data_root,
+                spec.frequency,
+                spec.universe,
+                split="IS",
+                **({"allow_empty_symbols": True} if spec.extra else {}),
+            )
+            if spec.extra:
+                from factory.event_execution import decision_times
+                from factory.events import load_extra
+
+                missing_kind, missing_name = "events", ", ".join(spec.extra)
+                extra = load_extra(
+                    data_root, spec.extra, as_of=decision_times(is_bars, spec.frequency).max()
+                )
         except (DataError, OSError, KeyError, ValueError):
             need = {
                 "id": f"{run_id}_bars",
-                "kind": "price_bars",
-                "name": "Required local price bars",
+                "kind": missing_kind,
+                "name": missing_name,
                 "symbols": spec.universe,
-                "frequency": spec.frequency,
+                "frequency": spec.frequency if missing_kind == "price_bars" else None,
                 "start": None,
                 "end": None,
                 "status": "unavailable",
@@ -85,7 +121,7 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
             "name": "Local price bars",
             "symbols": spec.universe,
             "frequency": spec.frequency,
-            "start": str(min(f.index[0] for f in is_bars.values())),
+            "start": str(min(f.index[0] for f in is_bars.values() if not f.empty)),
             "end": None,
             "status": "on_disk",
             "provider": None,
@@ -93,9 +129,39 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
         }
         need = records.put("data_needs", need["id"], run_id, need)
         summary["data_needs"] = [need]
+        for name in spec.extra:
+            event_need = {
+                **need,
+                "id": f"{run_id}_event_{name}",
+                "kind": "events",
+                "name": name,
+                "frequency": None,
+                "start": None,
+            }
+            # Record identity metadata belongs to each individual need.
+            event_need = {
+                key: event_need[key]
+                for key in (
+                    "id",
+                    "kind",
+                    "name",
+                    "symbols",
+                    "frequency",
+                    "start",
+                    "end",
+                    "status",
+                    "provider",
+                    "candidates",
+                )
+            }
+            summary["data_needs"].append(
+                records.put("data_needs", event_need["id"], run_id, event_need)
+            )
         summary = records.put("runs", run_id, run_id, summary)
-        records.event(run_id, "data", "passed", "Existing price tiers ready")
-        schema = worker_context(is_bars, spec.frequency)
+        records.event(run_id, "data", "passed", "Required local datasets ready")
+        schema = worker_context(
+            is_bars, spec.frequency, **({"extra": extra} if extra is not None else {})
+        )
         for variant in VARIANTS:
             rows[variant] = _save_row(records, _row(spec, run_id, variant))
             records.event(run_id, "worker", "started", "Generating strategy", variant=variant)
@@ -119,7 +185,14 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
                 records.event(run_id, "worker", "passed", "Candidate generated", variant=variant)
                 try:
                     definition, heals = validate_and_heal(
-                        spec, variant, code, is_bars, path, records, run_id
+                        spec,
+                        variant,
+                        code,
+                        is_bars,
+                        path,
+                        records,
+                        run_id,
+                        **({"extra": extra} if extra is not None else {}),
                     )
                     usages.extend(usage_record(item) for item in heals)
                     row["code"] = path.read_text()
@@ -168,6 +241,8 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
                     row["equity"] = evaluation.equity
                     row["equity_boundaries"] = evaluation.boundaries
                     row["activity"] = evaluation.activity
+                    if evaluation.cost_sharpes is not None:
+                        row["cost_sharpes"] = evaluation.cost_sharpes
                     if evaluation.activity:
                         row["days_traded"] = evaluation.activity["IS"].get("days_traded")
                     if evaluation.activity and evaluation.activity["IS"]["active_bars"] == 0:
@@ -197,7 +272,11 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
             report = with_deflated(report, trials, trial_variant_ids=trial_ids)
             row = rows[variant]
             row.update(
-                status=report.status,
+                status=(
+                    "INSUFFICIENT_SAMPLE"
+                    if report.status == "VERIFIED" and not spec.verification_eligible
+                    else report.status
+                ),
                 evals_passed=sum(result.passed for result in report.results.values()),
                 verified_sharpe=(
                     report.oos_daily_sharpe * (252**0.5)
@@ -291,7 +370,7 @@ def _row(spec, run_id, variant):
         "run_id": run_id,
         "source_id": spec.paper_id,
         "source_title": spec.title,
-        "source_kind": "paper",
+        "source_kind": spec.source_kind,
         "variant": variant,
         "test_type": spec.test_type,
         "frequency": spec.frequency,
@@ -303,7 +382,16 @@ def _row(spec, run_id, variant):
         "eval_eligible": False,
         "reached_eval_2": False,
         "days_traded": None,
-        "notes": [SURVIVORSHIP] if spec.frequency == "1day" else [],
+        "verification_eligible": spec.verification_eligible,
+        "eligibility_reason": spec.eligibility_reason,
+        "notes": list(
+            dict.fromkeys(
+                ([SURVIVORSHIP] if spec.frequency == "1day" else [])
+                + spec.notes
+                + (["unverified source"] if spec.extra else [])
+                + ([spec.eligibility_reason] if spec.eligibility_reason else [])
+            )
+        ),
     }
 
 

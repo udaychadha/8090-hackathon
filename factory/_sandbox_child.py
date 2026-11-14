@@ -16,6 +16,7 @@ from factory.contract import (
     validate_bars,
     validate_weights,
 )
+from factory.data import EventBars
 from factory.data_contract.sessions import protected_session_columns, validate_session_columns
 
 
@@ -24,6 +25,8 @@ def main() -> int:
         request = json.loads(Path("request.json").read_text())
         bars = {symbol: pd.read_parquet(f"{symbol}.parquet") for symbol in request["symbols"]}
         definition = read_strategy("strategy.py", available_universe=list(bars))
+        if definition.extra:
+            bars = EventBars(bars)
         index = validate_bars(bars)
         for symbol, frame in bars.items():
             validate_session_columns(frame, definition.frequency, symbol)
@@ -46,7 +49,14 @@ def main() -> int:
                     ) from error
             return validate_weights(output, index, definition.universe)
 
-        first, second = generate(), generate()
+        if definition.extra:
+            from factory.event_execution import generate_event_weights
+
+            extra = {name: pd.read_parquet(f"extra-{name}.parquet") for name in request["extra"]}
+            first = generate_event_weights(strategy, definition, bars, request["params"], extra)
+            second = generate_event_weights(strategy, definition, bars, request["params"], extra)
+        else:
+            first, second = generate(), generate()
         try:
             pd.testing.assert_frame_equal(first, second, check_exact=True)
         except AssertionError as error:

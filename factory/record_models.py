@@ -79,6 +79,7 @@ class VariantStatus(StrEnum):
     BUG_UNRESOLVED = "BUG_UNRESOLVED"
     BLOCKED_DATA = "BLOCKED_DATA"
     INACTIVE = "INACTIVE"
+    INSUFFICIENT_SAMPLE = "INSUFFICIENT_SAMPLE"
     VOID = "VOID"
 
 
@@ -562,6 +563,15 @@ class Voidable(Record):
 
 
 class Variant(Voidable):
+    cost_sharpes: dict[Literal["IS", "OOS"], dict[str, Number | None]] | None = Field(
+        default=None, description="Annualized Sharpes by round-trip bps from the captured targets."
+    )
+    verification_eligible: StrictBool = Field(
+        default=True, description="Whether the frozen sample gate allows a VERIFIED verdict."
+    )
+    eligibility_reason: StrictStr | None = Field(
+        default=None, description="Predeclared reason a sample cannot establish verification."
+    )
     reached_eval_2: StrictBool = Field(
         default=False, description="Durable evidence that this candidate entered Eval 2."
     )
@@ -635,9 +645,17 @@ class Variant(Voidable):
         if self.status != "VOID" and self.evals_passed != sum(e.passed for e in self.evals):
             raise ValueError("Passed eval count differs from recorded evidence")
         if self.status == "VERIFIED" and (
-            set(numbers) != set(range(1, 6)) or self.evals_passed != 5
+            set(numbers) != set(range(1, 6))
+            or self.evals_passed != 5
+            or not self.verification_eligible
         ):
             raise ValueError("VERIFIED requires five recorded passing evals")
+        if not self.verification_eligible and not self.eligibility_reason:
+            raise ValueError("Ineligible verification requires a reason")
+        if self.status == "INSUFFICIENT_SAMPLE" and (
+            self.verification_eligible or self.evals_passed != 5
+        ):
+            raise ValueError("INSUFFICIENT_SAMPLE requires five passes and failed eligibility")
         if self.original_result and self.original_result.status not in set(VariantStatus):
             raise ValueError("Original variant status is not a variant verdict")
         return self

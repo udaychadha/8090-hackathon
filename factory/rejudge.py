@@ -89,13 +89,17 @@ def plan_rejudgment(records):
                 count = sum(e["passed"] for e in values.values())
                 after["evals_passed"] = after["default_evals_passed"] = count
                 # An operational stop cannot become successful just by rejudging metrics.
-                if before["status"] == "VERIFIED" or before["status"].startswith("FAILED_EVAL_"):
+                if before["status"] in {"VERIFIED", "INSUFFICIENT_SAMPLE"} or before[
+                    "status"
+                ].startswith("FAILED_EVAL_"):
                     failed = [n for n in sorted(values) if not values[n]["passed"]]
                     if not failed and set(values) != set(range(1, 6)):
                         raise ValueError(
                             f"Incomplete evaluation evidence for {before['variant_id']}"
                         )
                     status = f"FAILED_EVAL_{failed[0]}" if failed else "VERIFIED"
+                    if status == "VERIFIED" and not before.get("verification_eligible", True):
+                        status = "INSUFFICIENT_SAMPLE"
                     after["status"] = after["default_status"] = status
             variants.append(after)
         rows.append(

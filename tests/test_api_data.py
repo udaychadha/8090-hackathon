@@ -123,7 +123,7 @@ def test_real_catalog_counts_are_from_main_and_smoke_manifests():
     if not (root / "data/1day/manifest.json").exists():
         pytest.skip("Local owner data unavailable")
     registry = DatasetRegistry(root)
-    assert len(registry.catalog()) == 557
+    assert len([item for item in registry.catalog() if item.kind == "price_bars"]) == 557
     assert len(registry.catalog(scope="smoke")) == 3
 
 

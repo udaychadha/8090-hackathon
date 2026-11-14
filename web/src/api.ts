@@ -92,6 +92,13 @@ export const api = {
     url(`/artifacts/${id(artifactId)}/download`, { include_voided: audit }),
   catalog: (scope = "main") =>
     request<{ datasets: Dataset[] }>("/data/catalog", { scope }),
+  uploadEvents: (file: File, name: string, mapping: Record<string, string>) => {
+    const body = new FormData();
+    body.append("file", file);
+    body.append("name", name);
+    body.append("mapping", JSON.stringify(mapping));
+    return request<Dataset>("/data/upload", {}, { method: "POST", body });
+  },
   dataset: (datasetId: string) =>
     request<DatasetDetail>(`/data/datasets/${id(datasetId)}`),
   preview: (datasetId: string, split: "visible" | "IS" | "OOS" = "visible") =>

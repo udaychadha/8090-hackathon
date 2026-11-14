@@ -43,7 +43,7 @@ def _scalar(value):
     return value
 
 
-def worker_context(bars: dict[str, pd.DataFrame], frequency: str) -> dict:
+def worker_context(bars: dict[str, pd.DataFrame], frequency: str, *, extra=None) -> dict:
     """Describe supplied IS frames and exactly three unchanged, distinct rows.
 
     Production callers must use load_bars(..., split='IS'). An absent split
@@ -80,7 +80,7 @@ def worker_context(bars: dict[str, pd.DataFrame], frequency: str) -> dict:
         }
         for position in _example_positions(frame, frequency)
     ]
-    return {
+    context = {
         "data_contract": section,
         "is_schema": {
             symbol: {
@@ -93,3 +93,21 @@ def worker_context(bars: dict[str, pd.DataFrame], frequency: str) -> dict:
         "example_rows": examples,
         "split": "IS",
     }
+    if extra is not None:
+        from factory.event_execution import decision_times, truncate_extra
+
+        # The caller may supply only validated event datasets. Always re-apply
+        # the IS visibility bound before copying any observation into a prompt.
+        visible = truncate_extra(extra, decision_times(prepared, frequency).max())
+        context["events"] = {
+            name: {
+                "columns": list(events.columns),
+                "dtypes": {key: str(dtype) for key, dtype in events.dtypes.items()},
+                "example_rows": [
+                    {key: _scalar(value) for key, value in row.items()}
+                    for row in events.head(3).to_dict("records")
+                ],
+            }
+            for name, events in visible.items()
+        }
+    return context

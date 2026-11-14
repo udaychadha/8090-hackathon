@@ -29,9 +29,10 @@ from factory.evals.sensitivity import sensitivity_eval
 from factory.sandbox import run_strategy
 
 
-def sandbox_runner(path: str | Path, *, timeout: float = 60.0) -> StrategyRunner:
+def sandbox_runner(path: str | Path, *, timeout: float = 60.0, extra=None) -> StrategyRunner:
     def run(bars: dict[str, pd.DataFrame], params: dict | None = None) -> pd.DataFrame:
-        return run_strategy(path, bars, params=params, timeout=timeout)
+        options = {"extra": extra} if extra is not None else {}
+        return run_strategy(path, bars, params=params, timeout=timeout, **options)
 
     return run
 
@@ -109,9 +110,13 @@ def evaluate(
     )
     results[3] = sensitivity_eval(run, is_bars, params, frequency, is_base.metrics.sharpe)
     lap("eval_3")
-    joined = {}
+    joined = type(is_bars)()
     for symbol, frame in is_bars.items():
-        if not frame.index[-1] < oos_bars[symbol].index[0]:
+        if (
+            not frame.empty
+            and not oos_bars[symbol].empty
+            and not frame.index[-1] < oos_bars[symbol].index[0]
+        ):
             raise EvalError(f"{symbol}: OOS bars must start after IS bars end")
         joined[symbol] = pd.concat([frame, oos_bars[symbol]])
     oos_weights = run(joined, None).loc[lambda weights: weights.index > is_weights.index[-1]]
@@ -131,15 +136,25 @@ def evaluate_file(
     *,
     trial_sharpes: Sequence[float | None] | None = None,
     on_eval2_started: Callable[[], None] | None = None,
-    timeout: float = 60.0,
+    timeout: float | None = None,
 ) -> EvalReport:
     """Load the strategy's tier (IS and OOS only; HOLDOUT stays sealed) and evaluate."""
     definition = read_strategy(path)
+    timeout = (600 if definition.extra else 60) if timeout is None else timeout
     symbols = list(definition.universe)
-    is_bars = load_bars(data_root, definition.frequency, symbols, split="IS")
-    oos_bars = load_bars(data_root, definition.frequency, symbols, split="OOS")
+    options = {"allow_empty_symbols": True} if definition.extra else {}
+    is_bars = load_bars(data_root, definition.frequency, symbols, split="IS", **options)
+    oos_bars = load_bars(data_root, definition.frequency, symbols, split="OOS", **options)
+    extra = None
+    if definition.extra:
+        from factory.event_execution import decision_times
+        from factory.events import load_extra
+
+        extra = load_extra(
+            data_root, definition.extra, as_of=decision_times(oos_bars, definition.frequency).max()
+        )
     return evaluate(
-        sandbox_runner(path, timeout=timeout),
+        sandbox_runner(path, timeout=timeout, extra=extra),
         definition.params,
         definition.frequency,
         is_bars,

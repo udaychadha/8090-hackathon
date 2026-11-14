@@ -195,6 +195,65 @@ def generate_signals(bars: dict[str, pd.DataFrame], params: dict) -> pd.DataFram
 WO-12 adds an optional third argument, `extra: dict[str, pd.DataFrame]`, for
 event datasets. Strategies that do not declare `EXTRA = [...]` are unaffected.
 
+**Owner-sanctioned WO-12 extension, Nov 14:** implement event inputs now,
+ahead of the remaining optional work orders. Event strategies declare
+`EXTRA = [dataset_names]` and accept `generate_signals(bars, params, extra=None)`.
+Legacy two-argument strategies keep their existing execution path and results.
+Event visibility is determined exclusively by `available_at`, never by a
+transaction date. Both normal execution and Eval 1 apply the availability gate.
+Daily bar labels are midnight session labels, not decision timestamps; event
+decisions use the completed session's close. Intraday decisions use bar end.
+No change to eval thresholds is authorized by this extension.
+Event-only execution preserves typed empty symbol slices for stocks not yet
+observed in a partition or Eval 1 prefix; targets must be zero before their first
+quote. All declared symbols remain in the universe, and no prices are filled.
+Eval 1 retains the same cuts and comparison; only event-input pass-through changes.
+Legacy strategies retain their existing nonempty-symbol rule. Event executions
+may use an explicit 600-second sandbox budget; the legacy 60-second cap remains.
+
+The owner approved downloading and auditing Kadoa's public Congress archive
+(`github.com/kadoa-org/congress-trading-monitor`, `public/data`) in this chat.
+Pin and retain source provenance; use it only if eligible House/Senate stock
+transactions span at least five years. Report exact date ranges, row counts
+and daily-tier ticker overlap before any strategy run. Exclude executive-branch
+rows, options, non-stock assets, missing tickers and transactions other than
+purchases/sales. Keep both transaction and disclosure dates. Store normalized
+events in `data/events/congress_trades.parquet`; `available_at` is the first
+XNYS market open strictly after the disclosure date (date-only filings do not
+establish same-day availability). Label results `unverified source` and retain
+the daily universe's survivorship limitation. Raw source data stays uncommitted.
+
+Freeze these handwritten `test_type = "original"`, `source_kind = "described"`
+specifications before inspecting results; use normal A/B/C workers and all five
+evals, with no performance-driven revision:
+
+1. All Congress: equal-weight daily-tier stocks with a disclosed purchase in
+   the last 60 trading sessions, rebalanced daily; short SPY by the same total.
+   Use gross exposure one: +0.5 total long, -0.5 SPY; hold cash if the basket is
+   empty. Purchases establish eligibility; sales do not remove it early.
+2. Committee Congress, only after the first run completes: the same rules,
+   limited to members serving on a relevant committee on the transaction date.
+   Use dated rosters only within their documented periods; discard uncovered
+   trades. Report roster sources and coverage before use, and qualifying trade
+   count/date range before execution. Fewer than 200 qualifying purchases or
+   less than three years requires `short sample: not a verdict` on every result
+   and excludes VERIFIED eligibility even when all evals pass.
+
+The committee mapping is fixed: Armed Services -> Aerospace & Defense
+**industry**; Energy and Natural Resources / Energy and Commerce -> Energy;
+Financial Services / Banking -> Financials; HELP / Energy and Commerce's
+Health subcommittee -> Health Care; Commerce/Science/Transportation ->
+Communication Services and Information Technology. Use GICS from `data/sp500.csv`
+(its `GICS Sub-Industry` identifies Aerospace & Defense). Do not broaden mappings
+or extend roster periods after seeing outcomes. Snapshot-only evidence establishes
+membership on its snapshot date, not an entire congressional term.
+
+Report both specs' statuses, evals passed and Sharpe at every configured cost
+level beside an explicitly marked buy-and-hold SPY control on the same stored
+IS/OOS splits. Controls never enter Eval 5's trial cohort. A rigged strategy
+using transaction dates must be unable to observe a disclosure early. Regression
+checks must establish that strategies without EXTRA retain identical results.
+
 ## Backtest engine and strategy evals
 
 Implemented; `factory/engine.py` and `factory/evals/` are the reference.
@@ -530,6 +589,37 @@ an invented connectivity test. The interface does not change settings or eval lo
 the owner-sanctioned correction above is a separately audited backend revision.
 
 ## Interface
+
+### WO-12 API extension (November 14)
+
+`POST /api/data/upload` becomes available for event CSV files. Multipart fields:
+`file` (UTF-8 CSV, maximum 10 MiB), `name` (letters/digits/underscores, starting
+with a letter), and `mapping` (JSON object mapping canonical destination names
+to source column names, including `available_at` and `symbol`). Availability
+values must have explicit time zones; date-only inputs are rejected because
+they do not identify when the event became usable. Scalar free fields are
+preserved; invalid, empty or colliding mappings are rejected. Existing dataset
+names cannot be overwritten. Missing/invalid data returns 422; oversized files
+return 413; duplicate names return 409. Success returns the existing `Dataset`
+shape with kind events, frequency null, verified false and `unverified source`
+in notes. The catalog and dataset detail/preview routes include events, with
+bounded previews and price-tier HOLDOUT cutoffs honored for strategy access.
+No source downloader or remote fetch is implied by CSV upload.
+
+Short-sample eligibility is distinct from deterministic eval outcomes:
+`INSUFFICIENT_SAMPLE` is an additional variant status when all evals pass but
+the fixed committee sample gate prohibits VERIFIED. Existing failed/bug statuses
+remain, always accompanied by the short-sample note. Variant records additionally
+retain `verification_eligible` and `eligibility_reason`; no eval is rewritten.
+Variant detail also returns nullable `cost_sharpes`, keyed by IS/OOS and round-trip
+bps, computed from the exact captured targets without new strategy executions.
+It returns `verification_eligible` and nullable `eligibility_reason` explicitly.
+
+The owner also approved the seven official House/Senate roster snapshots in chat.
+`report/wo12-committee-audit.md` records URLs, document dates and limitations.
+No continuous membership intervals or historical publication timestamps are
+inferred from those snapshots. Current audit yields zero qualifying purchases;
+the committee experiment still runs, with the fixed short-sample exclusion.
 
 Lives in `web/`. If the owner's mock-up specifies a stack or layout, the
 mock-up wins. Otherwise use React + Vite + TypeScript. It talks to the API

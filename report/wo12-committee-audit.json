@@ -1,0 +1,395 @@
+{
+  "created_at": "2026-11-14T19:53:27.694407+00:00",
+  "sources": [
+    {
+      "id": "house-2019-12-02",
+      "chamber": "house",
+      "snapshot_date": "2019-12-02",
+      "url": "https://historycms.house.gov/WorkArea/DownloadAsset.aspx?id=25769816736",
+      "sha256": "7bd4418f68fdbf802206ec16bdc4224993ce264d8b42e1a8378606bf67c5fbca",
+      "pages": 70,
+      "pdf_metadata": {
+        "format": "PDF 1.6",
+        "title": "",
+        "author": "",
+        "subject": "",
+        "keywords": "",
+        "creator": "AH Formatter V6.6 MR4 for Linux64 : 6.6.6.37929 (2019/03/11 12:35JST)",
+        "producer": "Antenna House PDF Output Library 6.6.1437 (Linux64)",
+        "creationDate": "D:20191126112352-05'00'",
+        "modDate": "D:20191126115836-05'00'",
+        "trapped": "",
+        "encryption": null
+      },
+      "retrieved_at": "2026-11-14T19:45:14.519175+00:00",
+      "published_at": null,
+      "publication_issue": "Cover date is a roster snapshot date. Public release timestamp is not established; PDF creation/modification is not public availability."
+    },
+    {
+      "id": "house-2021-02-01",
+      "chamber": "house",
+      "snapshot_date": "2021-02-01",
+      "url": "https://historycms.house.gov/WorkArea/DownloadAsset.aspx?id=25769822882",
+      "sha256": "a5989d5c6a8ee6141219a808c0f461f5b57750d506ea423c288acecac07a4027",
+      "pages": 42,
+      "pdf_metadata": {
+        "format": "PDF 1.7",
+        "title": "",
+        "author": "",
+        "subject": "",
+        "keywords": "",
+        "creator": "PDFium",
+        "producer": "PDFium",
+        "creationDate": "D:20210202160242Z",
+        "modDate": "D:20210209213542Z",
+        "trapped": "",
+        "encryption": null
+      },
+      "retrieved_at": "2026-11-14T19:45:16.596476+00:00",
+      "published_at": null,
+      "publication_issue": "Cover date is a roster snapshot date. Public release timestamp is not established; PDF creation/modification is not public availability."
+    },
+    {
+      "id": "house-2024-12-16",
+      "chamber": "house",
+      "snapshot_date": "2024-12-16",
+      "url": "https://historycms.house.gov/WorkArea/DownloadAsset.aspx?id=36507226670",
+      "sha256": "06bbc63405271a0ff9578424028b355c065eac70581d62576479524490cf33cd",
+      "pages": 81,
+      "pdf_metadata": {
+        "format": "PDF 1.6",
+        "title": "",
+        "author": "",
+        "subject": "",
+        "keywords": "",
+        "creator": "Antenna House Formatter V7.3 R1 Linux : 7.3.1.59888 (2023-01-19T09:42+09)",
+        "producer": "Antenna House PDF Output Library 7.3.1851",
+        "creationDate": "D:20241216154627-05'00'",
+        "modDate": "D:20241216160924-05'00'",
+        "trapped": "",
+        "encryption": null
+      },
+      "retrieved_at": "2026-11-14T19:45:17.239495+00:00",
+      "published_at": null,
+      "publication_issue": "Cover date is a roster snapshot date. Public release timestamp is not established; PDF creation/modification is not public availability."
+    },
+    {
+      "id": "senate-2019-03-18",
+      "chamber": "senate",
+      "snapshot_date": "2019-03-18",
+      "url": "https://www.govinfo.gov/content/pkg/GPO-CPUB-116spub2/pdf/GPO-CPUB-116spub2.pdf",
+      "sha256": "681e60d5d851d48160aeccec93a512383d1c45843e275c1f8459049f1d0ef527",
+      "pages": 41,
+      "pdf_metadata": {
+        "format": "PDF 1.5",
+        "title": "35581.PS",
+        "author": "",
+        "subject": "",
+        "keywords": "",
+        "creator": "ACOMP.exe   WinVer 2.2a  Sep 11 2014",
+        "producer": "Acrobat Distiller 10.1.16 (Windows)",
+        "creationDate": "D:20190405003325-04'00'",
+        "modDate": "D:20190409123643-04'00'",
+        "trapped": "",
+        "encryption": null
+      },
+      "retrieved_at": "2026-11-14T19:45:17.801593+00:00",
+      "published_at": null,
+      "publication_issue": "Cover date is a roster snapshot date. Public release timestamp is not established; PDF creation/modification is not public availability."
+    },
+    {
+      "id": "senate-2021-06-08",
+      "chamber": "senate",
+      "snapshot_date": "2021-06-08",
+      "url": "https://www.govinfo.gov/content/pkg/GPO-CPUB-117spub5/pdf/GPO-CPUB-117spub5.pdf",
+      "sha256": "31e7863e0274f0e6f886a2e546b14b54423eb537a3cc5eb3e3d9c46a1bdc68c4",
+      "pages": 42,
+      "pdf_metadata": {
+        "format": "PDF 1.5",
+        "title": "untitled",
+        "author": "",
+        "subject": "",
+        "keywords": "",
+        "creator": "U.S. Gov. Printing Office -- G.S.D.D.",
+        "producer": "Acrobat Distiller 21.0 (Windows)",
+        "creationDate": "D:20210724032558-04'00'",
+        "modDate": "D:20210803102613-04'00'",
+        "trapped": "",
+        "encryption": null
+      },
+      "retrieved_at": "2026-11-14T19:45:18.296527+00:00",
+      "published_at": null,
+      "publication_issue": "Cover date is a roster snapshot date. Public release timestamp is not established; PDF creation/modification is not public availability."
+    },
+    {
+      "id": "senate-2023-03-30",
+      "chamber": "senate",
+      "snapshot_date": "2023-03-30",
+      "url": "https://www.govinfo.gov/content/pkg/GPO-CPUB-118spub3/pdf/GPO-CPUB-118spub3.pdf",
+      "sha256": "79b611512411dc648cae7a48dabcb9c2776e049dbef9752b3e9016737ecfad0c",
+      "pages": 41,
+      "pdf_metadata": {
+        "format": "PDF 1.5",
+        "title": "51749.PS",
+        "author": "",
+        "subject": "",
+        "keywords": "",
+        "creator": "ACOMP.exe   WinVer 2.2a  Sep 11 2014",
+        "producer": "Acrobat Distiller 23.0 (Windows)",
+        "creationDate": "D:20230502012541-04'00'",
+        "modDate": "D:20230508170049-04'00'",
+        "trapped": "",
+        "encryption": null
+      },
+      "retrieved_at": "2026-11-14T19:45:18.815022+00:00",
+      "published_at": null,
+      "publication_issue": "Cover date is a roster snapshot date. Public release timestamp is not established; PDF creation/modification is not public availability."
+    },
+    {
+      "id": "senate-2025-06-12",
+      "chamber": "senate",
+      "snapshot_date": "2025-06-12",
+      "url": "https://www.govinfo.gov/content/pkg/GPO-CPUB-119spub4/pdf/GPO-CPUB-119spub4.pdf",
+      "sha256": "38f827718227c32f2f503caa8beac81c482b736c60662c04ffd1a54896252b19",
+      "pages": 42,
+      "pdf_metadata": {
+        "format": "PDF 1.5",
+        "title": "untitled",
+        "author": "",
+        "subject": "",
+        "keywords": "",
+        "creator": "U.S. Gov. Printing Office -- G.S.D.D.",
+        "producer": "Acrobat Distiller 25.0 (Windows)",
+        "creationDate": "D:20250715085511-04'00'",
+        "modDate": "D:20250828075222-04'00'",
+        "trapped": "",
+        "encryption": null
+      },
+      "retrieved_at": "2026-11-14T19:45:19.321548+00:00",
+      "published_at": null,
+      "publication_issue": "Cover date is a roster snapshot date. Public release timestamp is not established; PDF creation/modification is not public availability."
+    }
+  ],
+  "input_sha256": {
+    "data/source/congress/eligible_intermediate.json": "4a5aca55002d1a06ef217dff5cc21a664de78471606383e6f6a4cb94ddd8ca03",
+    "data/sp500.csv": "3553f4b706c841c9a395143ecab44ba6f475b287b4fc7fcd4bf8536758dece42"
+  },
+  "membership_rows": 1042,
+  "roster_sections": [
+    {
+      "source_id": "house-2019-12-02",
+      "committee": "Armed Services",
+      "source_page": 11,
+      "member_count": 57
+    },
+    {
+      "source_id": "house-2019-12-02",
+      "committee": "Energy and Commerce",
+      "source_page": 17,
+      "member_count": 55
+    },
+    {
+      "source_id": "house-2019-12-02",
+      "committee": "Energy and Commerce / Health",
+      "source_page": 20,
+      "member_count": 33
+    },
+    {
+      "source_id": "house-2019-12-02",
+      "committee": "Financial Services",
+      "source_page": 22,
+      "member_count": 60
+    },
+    {
+      "source_id": "house-2021-02-01",
+      "committee": "Armed Services",
+      "source_page": 7,
+      "member_count": 58
+    },
+    {
+      "source_id": "house-2021-02-01",
+      "committee": "Energy and Commerce",
+      "source_page": 10,
+      "member_count": 58
+    },
+    {
+      "source_id": "house-2021-02-01",
+      "committee": "Financial Services",
+      "source_page": 12,
+      "member_count": 54
+    },
+    {
+      "source_id": "house-2024-12-16",
+      "committee": "Armed Services",
+      "source_page": 12,
+      "member_count": 57
+    },
+    {
+      "source_id": "house-2024-12-16",
+      "committee": "Energy and Commerce",
+      "source_page": 19,
+      "member_count": 51
+    },
+    {
+      "source_id": "house-2024-12-16",
+      "committee": "Energy and Commerce / Health",
+      "source_page": 21,
+      "member_count": 30
+    },
+    {
+      "source_id": "house-2024-12-16",
+      "committee": "Financial Services",
+      "source_page": 24,
+      "member_count": 51
+    },
+    {
+      "source_id": "senate-2019-03-18",
+      "committee": "Armed Services",
+      "source_page": 10,
+      "member_count": 27
+    },
+    {
+      "source_id": "senate-2019-03-18",
+      "committee": "Banking, Housing, and Urban Affairs",
+      "source_page": 12,
+      "member_count": 25
+    },
+    {
+      "source_id": "senate-2019-03-18",
+      "committee": "Commerce, Science, and Transportation",
+      "source_page": 14,
+      "member_count": 26
+    },
+    {
+      "source_id": "senate-2019-03-18",
+      "committee": "Energy and Natural Resources",
+      "source_page": 16,
+      "member_count": 20
+    },
+    {
+      "source_id": "senate-2019-03-18",
+      "committee": "Health, Education, Labor, and Pensions",
+      "source_page": 22,
+      "member_count": 23
+    },
+    {
+      "source_id": "senate-2021-06-08",
+      "committee": "Armed Services",
+      "source_page": 10,
+      "member_count": 26
+    },
+    {
+      "source_id": "senate-2021-06-08",
+      "committee": "Banking, Housing, and Urban Affairs",
+      "source_page": 12,
+      "member_count": 24
+    },
+    {
+      "source_id": "senate-2021-06-08",
+      "committee": "Commerce, Science, and Transportation",
+      "source_page": 15,
+      "member_count": 28
+    },
+    {
+      "source_id": "senate-2021-06-08",
+      "committee": "Energy and Natural Resources",
+      "source_page": 17,
+      "member_count": 20
+    },
+    {
+      "source_id": "senate-2021-06-08",
+      "committee": "Health, Education, Labor, and Pensions",
+      "source_page": 23,
+      "member_count": 22
+    },
+    {
+      "source_id": "senate-2023-03-30",
+      "committee": "Armed Services",
+      "source_page": 10,
+      "member_count": 25
+    },
+    {
+      "source_id": "senate-2023-03-30",
+      "committee": "Banking, Housing, and Urban Affairs",
+      "source_page": 12,
+      "member_count": 23
+    },
+    {
+      "source_id": "senate-2023-03-30",
+      "committee": "Commerce, Science, and Transportation",
+      "source_page": 14,
+      "member_count": 27
+    },
+    {
+      "source_id": "senate-2023-03-30",
+      "committee": "Energy and Natural Resources",
+      "source_page": 16,
+      "member_count": 19
+    },
+    {
+      "source_id": "senate-2023-03-30",
+      "committee": "Health, Education, Labor, and Pensions",
+      "source_page": 22,
+      "member_count": 21
+    },
+    {
+      "source_id": "senate-2025-06-12",
+      "committee": "Armed Services",
+      "source_page": 10,
+      "member_count": 27
+    },
+    {
+      "source_id": "senate-2025-06-12",
+      "committee": "Banking, Housing, and Urban Affairs",
+      "source_page": 12,
+      "member_count": 24
+    },
+    {
+      "source_id": "senate-2025-06-12",
+      "committee": "Commerce, Science, and Transportation",
+      "source_page": 15,
+      "member_count": 28
+    },
+    {
+      "source_id": "senate-2025-06-12",
+      "committee": "Energy and Natural Resources",
+      "source_page": 17,
+      "member_count": 20
+    },
+    {
+      "source_id": "senate-2025-06-12",
+      "committee": "Health, Education, Labor, and Pensions",
+      "source_page": 23,
+      "member_count": 23
+    }
+  ],
+  "eligible_trade_input_rows": 30366,
+  "point_date_purchases": 15,
+  "point_date_purchases_in_daily_universe": 12,
+  "dispositions": {
+    "not_purchase": 15561,
+    "no_snapshot_on_transaction_date": 14790,
+    "no_strict_name_match_on_relevant_rosters": 11,
+    "gics_mapping_does_not_match": 1,
+    "not_in_current_daily_universe": 3
+  },
+  "qualifying_purchase_count": 0,
+  "qualifying_transaction_start": null,
+  "qualifying_transaction_end": null,
+  "short_sample": true,
+  "required_note": "short sample: not a verdict",
+  "verified_eligible": false,
+  "historical_availability_eligible_count": 0,
+  "historical_availability_policy": "No roster public-release timestamp established. Do not treat cover, metadata or production date as public availability. Historical usable rows are zero until evidence or owner decision resolves this; no inferred timestamp was created.",
+  "matching_policy": "Exact normalized name plus chamber and exact snapshot/transaction date; punctuation/case/accents normalized; no aliases, middle-name deletion, fuzzy matching or crosswalk used.",
+  "aliases_applied": [],
+  "limitations": [
+    "unverified source",
+    "Current daily universe carries survivorship bias.",
+    "GICS sector/sub-industry classifications come from the current static data/sp500.csv, not historical classifications.",
+    "Seven snapshot days only; no inference over congressional terms or between snapshots.",
+    "The 2021-02-01 House publication contains no Health subcommittee roster; no Health membership inferred from full Energy and Commerce membership.",
+    "Strict matching can exclude genuine aliases; unmatched rows remain excluded and are retained for review.",
+    "PDF metadata and production timestamps do not establish public availability."
+  ]
+}

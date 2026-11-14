@@ -224,7 +224,6 @@ def test_invalid_pdf_and_unimplemented_controls_return_explicit_errors(root):
         assert client.post("/api/runs", json={"spec_id": "saved"}).status_code == 501
         for route in [
             "/api/intake",
-            "/api/data/upload",
             "/api/providers/alpaca/key",
             "/api/data/candidates/example/approve",
         ]:

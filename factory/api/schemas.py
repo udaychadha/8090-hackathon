@@ -148,6 +148,9 @@ class HealView(Response):
 
 
 class VariantDetail(LeaderboardRow):
+    cost_sharpes: dict[Literal["IS", "OOS"], dict[str, Number | None]] | None = None
+    verification_eligible: bool = True
+    eligibility_reason: str | None = None
     code: str | None
     params: dict[str, JsonValue] | None
     evals: list[EvalView]

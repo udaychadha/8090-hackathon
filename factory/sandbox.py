@@ -23,6 +23,7 @@ from factory.contract import (
     validate_params,
     validate_weights,
 )
+from factory.data import EventBars
 from factory.data_contract import DataError
 from factory.data_contract.sessions import (
     add_session_columns,
@@ -48,18 +49,23 @@ def run_strategy(
     bars: dict[str, pd.DataFrame],
     *,
     params: dict | None = None,
+    extra: dict[str, pd.DataFrame] | None = None,
     timeout: float = 60.0,
 ) -> pd.DataFrame:
     """Validate, run twice to detect nondeterminism, return validated weights.
 
     The 60-second default covers child startup and both calls. Later lookahead
     evals must still compare truncated inputs; determinism alone proves no
-    absence of lookahead.
+    absence of lookahead. Event strategies execute at every decision and may
+    explicitly request up to 600 seconds; legacy strategies retain the 60s cap.
     """
-    if not 0 < timeout <= 60:
-        raise ValueError("timeout must be greater than zero and at most 60 seconds")
     definition = read_strategy(path, available_universe=list(bars))
+    maximum = 600 if definition.extra else 60
+    if not 0 < timeout <= maximum:
+        raise ValueError(f"timeout must be greater than zero and at most {maximum} seconds")
     selected = {symbol: bars[symbol] for symbol in definition.universe}
+    if definition.extra:
+        selected = EventBars(selected)
     index = validate_bars(selected)
     try:
         for symbol, frame in selected.items():
@@ -69,17 +75,28 @@ def run_strategy(
                 selected[symbol] = add_session_columns(frame, definition.frequency)
     except DataError as error:
         raise ContractViolation(str(error)) from error
+    staged_extra = {}
+    if definition.extra:
+        from factory.event_execution import decision_times, truncate_extra, validate_extra
+
+        validated_extra = validate_extra(extra, definition.extra)
+        staged_extra = truncate_extra(
+            validated_extra, decision_times(selected, definition.frequency).max()
+        )
     parameters = validate_params(definition.params if params is None else params, definition.params)
     with tempfile.TemporaryDirectory(prefix="arena-strategy-") as directory:
         cwd = Path(directory)
         (cwd / "strategy.py").write_text(definition.source)
         for symbol, frame in selected.items():
             frame.to_parquet(cwd / f"{symbol}.parquet", index=True)
+        for name, frame in staged_extra.items():
+            frame.to_parquet(cwd / f"extra-{name}.parquet", index=False)
         (cwd / "request.json").write_text(
             json.dumps(
                 {
                     "symbols": list(selected),
                     "params": parameters,
+                    "extra": list(staged_extra),
                 },
                 allow_nan=False,
             )
@@ -137,4 +154,9 @@ def run_strategy(
             raise StrategyExecutionError(message, remote_traceback=trace)
         weights = pd.read_parquet(cwd / "weights.parquet")
         # Validate again in the trusted parent; child output is not authoritative.
-        return validate_weights(weights, index, definition.universe)
+        weights = validate_weights(weights, index, definition.universe)
+        if definition.extra:
+            from factory.event_execution import validate_observed_weights
+
+            validate_observed_weights(weights, selected)
+        return weights

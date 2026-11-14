@@ -53,7 +53,7 @@ def health():
             "eval_schema": True,
             "intake": False,
             "saved_spec_runs": False,
-            "data_upload": False,
+            "data_upload": True,
             "provider_keys": False,
             "source_approval": False,
             "custom_eval_profiles": False,
@@ -232,9 +232,12 @@ def variant_detail(request: Request, variant_id: str, include_voided: bool = Fal
                     "activity",
                     "equity_boundaries",
                     "original_result",
+                    "cost_sharpes",
+                    "eligibility_reason",
                 )
             },
             "source": run.get("source"),
+            "verification_eligible": row.get("verification_eligible", True),
             "critique": critique,
             "steps": steps,
             "evals": [
@@ -406,7 +409,6 @@ async def start_run(request: Request):
 
 
 @router.post("/intake")
-@router.post("/data/upload")
 @router.post("/providers/{name}/key")
 @router.post("/data/candidates/{candidate_id}/approve")
 def unavailable():

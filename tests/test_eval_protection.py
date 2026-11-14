@@ -17,10 +17,12 @@ def test_protected_hashes_match_only_authorized_eval_revision():
         changed
         == set(proof["authorized_changes"])
         == {
-            "factory/evals/decay.py",
-            "factory/evals/deflated.py",
+            "factory/contract.py",
+            "factory/evals/lookahead.py",
             "factory/evals/runner.py",
         }
     )
-    for name in ("factory/evals/config.py", "factory/contract.py"):
+    for name in ("factory/evals/config.py", "factory/evals/decay.py", "factory/evals/deflated.py"):
         assert current[name] == proof["previous_sha256"][name]
+    assert proof["previous_revision"]["revision"] == "2026-11-14-eval45-global-v2"
+    assert proof["previous_revision"]["sha256"] == proof["previous_sha256"]

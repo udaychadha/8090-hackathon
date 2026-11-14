@@ -14,6 +14,7 @@ def summary(row):
     if status.startswith("FAILED_EVAL_"):
         return f"Failed Eval {status.rsplit('_', 1)[1]}; {count}/5 evaluations passed."
     return {
+        "INSUFFICIENT_SAMPLE": "All five evaluations passed; short sample: not a verdict.",
         "INACTIVE": (
             "The strategy did not meet the IS activity requirement; performance was not verified."
         ),
@@ -131,6 +132,19 @@ def run_steps(run, events):
         ("extract", "Extract strategy specification"),
         ("data", "Resolve data needs"),
     ]:
+        if stage == "extract" and (run.get("source") or {}).get("source_kind") == "described":
+            logs = [e for e in events if e["stage"] == "intake" and e["variant"] is None]
+            result.append(
+                _step(
+                    "intake",
+                    "extract",
+                    "Owner-supplied specification",
+                    "recorded",
+                    logs,
+                    [e["message"] for e in logs],
+                )
+            )
+            continue
         logs = [e for e in events if e["stage"] == stage and e["variant"] is None]
         state = _event_state(logs, terminal)
         if stage == "extract" and run.get("source"):

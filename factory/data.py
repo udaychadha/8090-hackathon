@@ -34,6 +34,17 @@ DAILY_LIMITATION = (
 )
 
 
+class EventBars(dict):
+    """Trusted marker: a price slice may retain not-yet-observed event-universe symbols.
+
+    Each physical file still passes normal full-data validation. The aggregate
+    clock must be nonempty; empty symbols are never backfilled or removed.
+    """
+
+    def copy(self):
+        return EventBars(self)
+
+
 def validate_symbol(symbol: str) -> str:
     if not isinstance(symbol, str) or not re.fullmatch(r"[A-Z][A-Z0-9.]{0,14}", symbol):
         raise DataError(f"Invalid equity symbol: {symbol!r}")
@@ -199,6 +210,7 @@ def load_bars(
     *,
     split: Literal["IS", "OOS", "HOLDOUT"],
     allow_holdout: bool = False,
+    allow_empty_symbols: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """Validate the complete stored dataset, then expose only the requested partition."""
     from factory.data_contract.sessions import add_session_columns
@@ -217,7 +229,7 @@ def load_bars(
     bounds = manifest["splits"][split]
     if not symbols or len(symbols) != len(set(symbols)):
         raise DataError("Universe must be nonempty and unique")
-    result = {}
+    result = EventBars() if allow_empty_symbols else {}
     for symbol in symbols:
         validate_symbol(symbol)
         if symbol not in manifest["symbols"]:
@@ -232,11 +244,13 @@ def load_bars(
             },
         )
         frame = frame.loc[pd.Timestamp(bounds["start"]) : pd.Timestamp(bounds["end"])].copy()
-        if frame.empty:
+        if frame.empty and not allow_empty_symbols:
             raise DataError(f"No {split} data for {symbol}")
         frame = add_session_columns(frame, frequency)
         frame.attrs["split"] = split
         result[symbol] = frame
+    if allow_empty_symbols and not any(not frame.empty for frame in result.values()):
+        raise DataError(f"No {split} data for any requested symbol")
     return result
 
 

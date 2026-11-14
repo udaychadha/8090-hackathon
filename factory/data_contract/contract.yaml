@@ -25,6 +25,14 @@ semantics:
   - IS, OOS and HOLDOUT are disjoint chronological 60/20/20 slices of the shared expected tier grid; they may bisect sessions and differ across tiers. Workers receive IS only. HOLDOUT is sealed from strategy/model runs.
   - Session columns and is_filled are preserved through execution. Derived session columns are read-only inputs; changing or deleting them causes a contract error before strategy output is accepted.
   - Strategy activity is a bug check on IS target weights only. A traded day is an exchange date with any nonzero target, including held exposure; this is not a performance or turnover threshold.
+  - Event strategies declare EXTRA as a list of dataset names and accept an optional third extra argument. Legacy strategies without EXTRA retain their two-argument execution path.
+  - Event strategies are invoked on successive observed bar prefixes. Each invocation receives only events with available_at no later than its decision time; only its final target row is retained. They may return one current row or the full prefix, always with every UNIVERSE column. Rewriting earlier rows cannot backdate a disclosure.
+  - Visible event frames gain read-only sessions_since_available (int64, XNYS sessions). Zero means the first session whose close is at or after availability; each subsequent session adds one. This includes events disclosed before the IS slice, without giving workers earlier price data. A 60-session window uses ages zero through 59.
+  - Event decision times are minute interval ends or the scheduled XNYS session close for daily bars, including early closes and daylight-saving transitions. The daily historical price availability limitation remains; a midnight daily label is never used as an event decision instant.
+  - Transaction dates describe economic activity, not information availability. Date-only congressional disclosures become available at the next scheduled market open strictly after the disclosure date; weekends and holidays advance to the next session.
+  - Event datasets are validated in full on write and load before visibility filtering. An empty visible subset is valid even though a stored dataset must contain rows. Worker prompts contain only IS-visible event schema and examples; HOLDOUT events stay sealed.
+  - For the congressional specifications, the 60-session purchase window is measured from availability in trading sessions, inclusive of the current session. Sales do not cancel purchase eligibility. Dataset snapshots are unverified and ticker membership is subject to survivorship bias.
+  - Event-only bar dictionaries retain typed empty symbol slices before a stock's first observation, including at Eval 1 cuts; targets for those symbols must be zero. This never creates price rows or fills gaps, and the engine still rejects held exposure without a close-to-close return. Legacy non-event input rules are unchanged.
 activity:
   minimum_days: 5
   status: INACTIVE

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import json
 from pathlib import Path
@@ -11,6 +12,7 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.datastructures import UploadFile
 
 from factory.api.artifacts import (
     Artifact,
@@ -20,9 +22,17 @@ from factory.api.artifacts import (
     safe_path,
 )
 from factory.api.common import root_from, sanitize
-from factory.data import DAILY_LIMITATION, expected_index, load_bars, validate_tier_manifest
+from factory.data import (
+    DAILY_LIMITATION,
+    expected_index,
+    load_bars,
+    session_schedule,
+    validate_tier_manifest,
+)
 from factory.data_contract.generated import SPEC
 from factory.data_contract.runtime import validate_entity
+from factory.data_contract.storage import read_dataset
+from factory.events import MAX_EVENT_BYTES, event_path, upload_event_csv
 
 router = APIRouter(prefix="/api/data", tags=["data"])
 
@@ -175,6 +185,58 @@ class DatasetRegistry:
                 except (ValueError, KeyError, TypeError):
                     raise HTTPException(409, "Dataset metadata failed validation") from None
                 result[item.id] = (item, manifest, metadata, tier, base, path)
+        events = base / "events"
+        for path in sorted(events.glob("*.parquet")):
+            name = path.stem
+            try:
+                event_path(base, name)
+            except ValueError:
+                continue
+            if (
+                safe_path(self.root, path) is None
+                or safe_path(self.root, path.with_suffix(".manifest.json")) is None
+            ):
+                continue
+            try:
+                frame = read_dataset(path, expected={"kind": "events"})
+                manifest = read_json(self.root, path.with_suffix(".manifest.json"))
+                item = Dataset(
+                    id=dataset_identifier(scope, "events", name),
+                    name=name,
+                    kind="events",
+                    symbols=sorted(frame.symbol.unique().tolist()),
+                    frequency=None,
+                    start=pd.Timestamp(manifest["date_range"]["start"]).date().isoformat(),
+                    end=pd.Timestamp(manifest["date_range"]["end"]).date().isoformat(),
+                    rows=len(frame),
+                    source=manifest["source"],
+                    verified=False,
+                    scope=scope,
+                    schema_version=manifest["schema_version"],
+                    feed=manifest["feed"],
+                    adjustment=manifest["adjustment"],
+                    fill_rate=0,
+                    notes=[
+                        "unverified source",
+                        "Event visibility uses available_at only.",
+                        "Preview uses the daily price tier's completed-session boundaries; "
+                        "HOLDOUT is sealed.",
+                    ],
+                )
+                tier_path = base / "1day/manifest.json"
+                tier = (
+                    read_json(self.root, tier_path)
+                    if safe_path(self.root, tier_path)
+                    else {"splits": {}}
+                )
+                if tier["splits"]:
+                    validate_tier_manifest(tier, "1day", dataset=str(tier_path))
+                metadata = {
+                    "fields": {column: {"dtype": str(frame[column].dtype)} for column in frame}
+                }
+                result[item.id] = (item, manifest, metadata, tier, base, path)
+            except (ValueError, KeyError, TypeError, OSError):
+                raise HTTPException(409, "Event dataset failed stored-file validation") from None
         return result
 
     def catalog(self, scope="main"):
@@ -193,6 +255,8 @@ class DatasetRegistry:
     def detail(self, dataset_id):
         item, manifest, metadata, tier, _, _ = self._entry(dataset_id)
         fields = {**SPEC["ontology"]["Bar"]["fields"], **SPEC["ontology"]["Bar"]["derived_fields"]}
+        if item.kind == "events":
+            fields = {**metadata.get("fields", {}), **SPEC["datasets"]["events"]["fields"]}
         return DatasetDetail.model_validate(
             sanitize(
                 {
@@ -215,6 +279,8 @@ class DatasetRegistry:
         if not 1 <= limit <= 2000:
             raise HTTPException(422, "Preview limit must be between 1 and 2000")
         item, _, _, tier, base, path = self._entry(dataset_id)
+        if item.kind == "events":
+            return self._event_preview(item, tier, path, split, limit)
         partitions = ["IS", "OOS"] if split == "visible" else [split]
         for required in [path, path.with_suffix(".manifest.json"), path.parent / "manifest.json"]:
             if safe_path(self.root, required) is None:
@@ -277,6 +343,112 @@ class DatasetRegistry:
             raise HTTPException(
                 409, "Dataset failed stored-file validation; preview unavailable"
             ) from None
+
+    def _event_preview(self, item, tier, path, split, limit):
+        if not tier.get("splits"):
+            raise HTTPException(
+                409, "Daily price split boundaries are required for a sealed event preview"
+            )
+        try:
+            schedule = session_schedule(tier["start"], tier["through"])
+
+            def close(label):
+                day = (
+                    pd.Timestamp(label).tz_convert("America/New_York").tz_localize(None).normalize()
+                )
+                return pd.Timestamp(schedule.loc[day, "close"])
+
+            splits = tier["splits"]
+            right = close(splits["IS" if split == "IS" else "OOS"]["end"])
+            frame = read_dataset(path, expected={"kind": "events"})
+            # IS/visible includes earlier disclosures as historical context. OOS
+            # displays only newly available events after the IS decision cutoff.
+            frame = frame.loc[frame.available_at <= right]
+            left = close(splits["IS"]["end"]) if split == "OOS" else None
+            if left is not None:
+                frame = frame.loc[frame.available_at > left]
+            sampled = frame.iloc[
+                np.unique(np.linspace(0, len(frame) - 1, min(len(frame), limit), dtype=int))
+            ]
+            rows = [
+                {
+                    key: value.isoformat()
+                    if isinstance(value, pd.Timestamp)
+                    else value.item()
+                    if isinstance(value, np.generic)
+                    else value
+                    for key, value in row.items()
+                }
+                for _, row in sampled.iterrows()
+            ]
+            return DatasetPreview.model_validate(
+                sanitize(
+                    {
+                        "dataset_id": item.id,
+                        "rows": rows,
+                        "splits": splits,
+                        "coverage": {
+                            "split": split,
+                            "observed_rows": len(frame),
+                            "expected_rows": None,
+                            "missing_rows": None,
+                            "filled_rows": None,
+                            "start": left.isoformat() if left is not None else None,
+                            "end": right.isoformat(),
+                            "availability_field": "available_at",
+                            "note": "Events have no expected price grid or gap inference.",
+                        },
+                        "gaps": [],
+                        "total_gaps": 0,
+                        "holdout_sealed": True,
+                        "downsampled": len(frame) > limit,
+                    }
+                )
+            )
+        except (ValueError, KeyError, TypeError, OSError):
+            raise HTTPException(
+                409, "Event preview failed stored-file or boundary validation"
+            ) from None
+
+
+@router.post("/upload", response_model=Dataset)
+async def upload_events(request: Request):
+    if "multipart/form-data" not in request.headers.get("content-type", ""):
+        raise HTTPException(422, "Upload an event CSV with file, name and mapping fields")
+    async with request.form(max_files=1, max_fields=2) as form:
+        upload, name, raw_mapping = form.get("file"), form.get("name"), form.get("mapping")
+        if (
+            not isinstance(upload, UploadFile)
+            or not isinstance(name, str)
+            or not isinstance(raw_mapping, str)
+        ):
+            raise HTTPException(422, "Multipart file, name and mapping fields are required")
+        content = await upload.read(MAX_EVENT_BYTES + 1)
+        if len(content) > MAX_EVENT_BYTES:
+            raise HTTPException(413, "Event CSV exceeds 10 MiB")
+        try:
+
+            def unique_object(pairs):
+                result = {}
+                for key, value in pairs:
+                    if key in result:
+                        raise ValueError("Duplicate mapping destination")
+                    result[key] = value
+                return result
+
+            mapping = json.loads(raw_mapping, object_pairs_hook=unique_object)
+            await asyncio.to_thread(
+                upload_event_csv, root_from(request) / "data", name, content, mapping
+            )
+        except FileExistsError:
+            raise HTTPException(409, "An event dataset with this name already exists") from None
+        except (ValueError, TypeError, OSError, OverflowError):
+            raise HTTPException(
+                422,
+                "Invalid event CSV: use unique mapped fields, finite scalar values "
+                "and explicit availability timezones",
+            ) from None
+    return DatasetRegistry(root_from(request))._entry(dataset_identifier("main", "events", name))[0]
 
 
 @router.get("/catalog", response_model=Catalog)

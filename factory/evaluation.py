@@ -25,16 +25,27 @@ class RecordedEvaluation:
     boundaries: dict | None = None
     artifact_error: str | None = None
     activity: dict | None = None
+    cost_sharpes: dict | None = None
 
 
 def evaluate_file(
-    path, data_root="data", *, timeout=60.0, on_eval2_started=None
+    path, data_root="data", *, timeout=None, on_eval2_started=None
 ) -> RecordedEvaluation:
     definition = read_strategy(path)
+    timeout = (600 if definition.extra else 60) if timeout is None else timeout
     symbols = list(definition.universe)
-    is_bars = load_bars(data_root, definition.frequency, symbols, split="IS")
-    oos_bars = load_bars(data_root, definition.frequency, symbols, split="OOS")
-    run = sandbox_runner(path, timeout=timeout)
+    options = {"allow_empty_symbols": True} if definition.extra else {}
+    is_bars = load_bars(data_root, definition.frequency, symbols, split="IS", **options)
+    oos_bars = load_bars(data_root, definition.frequency, symbols, split="OOS", **options)
+    extra = None
+    if definition.extra:
+        from factory.event_execution import decision_times
+        from factory.events import load_extra
+
+        extra = load_extra(
+            data_root, definition.extra, as_of=decision_times(oos_bars, definition.frequency).max()
+        )
+    run = sandbox_runner(path, timeout=timeout, extra=extra)
     captured = {}
 
     def record_run(bars, params=None):
@@ -97,6 +108,18 @@ def evaluate_file(
                 }
                 for split, result, weights in zip(
                     ("IS", "OOS"), results, (is_weights, oos_weights), strict=True
+                )
+            },
+            cost_sharpes={
+                split: {
+                    f"{cost:g}": backtest(
+                        bars, weights, frequency=definition.frequency, round_trip_bps=cost
+                    ).metrics.sharpe
+                    for cost in config.FRICTION_BPS_GRID
+                }
+                for split, bars, weights in (
+                    ("IS", is_bars, is_weights),
+                    ("OOS", oos_bars, oos_weights),
                 )
             },
         )
