@@ -13,7 +13,9 @@ import unicodedata
 from pathlib import Path
 
 from dotenv import load_dotenv
+from pydantic import ValidationError
 
+from factory.agents.records import usage_record
 from factory.contract import StrategySpec
 from factory.data_contract.prompts import data_section
 from factory.llm import Completion, complete
@@ -22,6 +24,50 @@ from factory.redaction import redact, redacted_json
 
 class ExtractionError(ValueError):
     """The supplied paper cannot safely yield a complete, valid spec."""
+
+    def __init__(self, message, *, completion=None, diagnostics=None):
+        super().__init__(redact(message))
+        # Retain accounting only: Completion.text must never enter failure records.
+        self.usages = None if completion is None else redact([usage_record(completion)])
+        self.diagnostics = redact(diagnostics or [])
+
+
+def _validation_diagnostics(error):
+    """Report schema locations and error kinds without copying rejected input.
+
+    Pydantic messages can include user values (including our symbol validator),
+    and extra-field locations can be arbitrary input keys. Use known schema
+    names and fixed messages rather than persisting those strings.
+    """
+    schema = StrategySpec.model_json_schema()
+    known_fields = set(schema["properties"])
+    for definition in schema.get("$defs", {}).values():
+        known_fields.update(definition.get("properties", {}))
+    messages = {
+        "json_invalid": "Response is not a valid JSON document",
+        "string_pattern_mismatch": "String does not match the required pattern",
+        "extra_forbidden": "Unexpected field is not allowed",
+        "missing": "Required field is missing",
+        "too_short": "Value contains fewer items than required",
+        "string_too_short": "String is shorter than required",
+    }
+    diagnostics = []
+    for detail in error.errors(include_input=False, include_context=False, include_url=False):
+        kind = detail["type"]
+        message = messages.get(kind, "Value does not satisfy the field requirements")
+        if detail["msg"] == "Value error, Universe contains duplicate symbols":
+            message = "Universe contains duplicate symbols"
+        diagnostics.append(
+            {
+                "loc": [
+                    part if isinstance(part, int) or part in known_fields else "<field>"
+                    for part in detail["loc"]
+                ],
+                "type": kind,
+                "msg": message,
+            }
+        )
+    return diagnostics
 
 
 def _pdf_path(path: str | Path) -> Path:
@@ -184,14 +230,25 @@ def extract_text(text: str, available: dict[str, list[str]]) -> tuple[StrategySp
     completion = complete("extractor", system, redacted_json(payload))
     try:
         spec = StrategySpec.model_validate_json(completion.text)
-    except ValueError:
-        raise ExtractionError("Extractor returned invalid StrategySpec JSON") from None
+    except ValidationError as error:
+        diagnostics = _validation_diagnostics(error)
+        invalid_json = any(detail["type"] == "json_invalid" for detail in diagnostics)
+        message = (
+            "Extractor returned invalid JSON"
+            if invalid_json
+            else "Extractor returned invalid StrategySpec fields"
+        )
+        raise ExtractionError(message, completion=completion, diagnostics=diagnostics) from None
     if spec.paper_id != paper_id:
-        raise ExtractionError("Extractor did not preserve the supplied paper identity")
+        raise ExtractionError(
+            "Extractor did not preserve the supplied paper identity", completion=completion
+        )
     if spec.test_type == "replication" and not set(spec.universe).issubset(
         available.get(spec.frequency, [])
     ):
-        raise ExtractionError("Replication requires the paper's assets in the selected tier")
+        raise ExtractionError(
+            "Replication requires the paper's assets in the selected tier", completion=completion
+        )
     return spec, completion
 
 

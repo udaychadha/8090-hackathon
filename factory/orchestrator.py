@@ -255,7 +255,13 @@ def run_paper(paper, *, data_root="data", output_root="."):
         return _finish(records, summary, rows, usages, started)
     except Exception as error:
         # Avoid dumping SDK errors, prompts or environment variables to disk/stdout.
-        summary.update(status="FAILED", error_type=type(error).__name__, cost_complete=False)
+        summary.update(status="FAILED", error_type=type(error).__name__)
+        if isinstance(error, ExtractionError) and error.usages is not None:
+            usages.extend(error.usages)
+            if error.diagnostics:
+                summary["extraction_diagnostics"] = error.diagnostics
+        else:
+            summary["cost_complete"] = False
         if isinstance(error, (LLMError, ExtractionError)):
             summary["error"] = str(error)
         for row in rows.values():

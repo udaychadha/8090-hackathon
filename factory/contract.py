@@ -13,7 +13,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
-from typing import Literal
+from typing import Annotated, Literal
 
 import numpy as np
 import pandas as pd
@@ -67,7 +67,9 @@ class StrategySpec(BaseModel):
     title: str = Field(min_length=1)
     category: str = Field(min_length=1)
     hypothesis: str = Field(min_length=1)
-    universe: list[str] = Field(min_length=1)
+    universe: list[
+        Annotated[str, Field(pattern=SPEC["ontology"]["Instrument"]["fields"]["symbol"]["pattern"])]
+    ] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
     frequency: Frequency
     signal_rules: list[str] = Field(min_length=1)
     claimed_metrics: ClaimedMetrics
