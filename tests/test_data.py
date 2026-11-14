@@ -66,10 +66,22 @@ def test_conflicting_duplicates_rejected():
 
 
 def test_loader_partition_pushdown_and_holdout_guard(tmp_path):
+    from factory.data_contract.storage import write_dataset
+
     index = expected_index("1day", "2024-06-03", "2024-06-14")
     tier = tmp_path / "1day"
     tier.mkdir()
-    bars(index).to_parquet(tier / "SPY.parquet")
+    write_dataset(
+        tier / "SPY.parquet",
+        bars(index).assign(is_filled=False),
+        kind="price_bars",
+        frequency="1day",
+        start="2024-06-03",
+        through="2024-06-14",
+        source="test fixture",
+        feed="sip",
+        adjustment="all",
+    )
     splits = split_boundaries(index)
     (tier / "manifest.json").write_text(
         json.dumps(
@@ -77,6 +89,11 @@ def test_loader_partition_pushdown_and_holdout_guard(tmp_path):
                 "symbols": ["SPY"],
                 "splits": splits,
                 "complete": True,
+                "frequency": "1day",
+                "start": "2024-06-03",
+                "through": "2024-06-14",
+                "feed": "sip",
+                "adjustment": "all",
             }
         )
     )

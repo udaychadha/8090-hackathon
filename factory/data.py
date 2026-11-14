@@ -16,6 +16,9 @@ import exchange_calendars as xcals
 import numpy as np
 import pandas as pd
 
+from factory.data_contract.errors import DataError, fail
+from factory.data_contract.generated import SPEC
+
 Frequency = Literal["1min", "1day"]
 OHLCV = ["open", "high", "low", "close", "volume"]
 INTRADAY_UNIVERSE = (
@@ -30,10 +33,6 @@ DAILY_ETFS = ["SPY", "QQQ", "TLT", "GLD"]
 DAILY_LIMITATION = (
     "The daily universe is today's S&P 500 membership; results carry survivorship bias."
 )
-
-
-class DataError(ValueError):
-    """Missing, malformed, or incompatible market data."""
 
 
 def validate_symbol(symbol: str) -> str:
@@ -52,18 +51,19 @@ def validate_frequency(frequency: str) -> Frequency:
 def session_schedule(start: str, through: str) -> pd.DataFrame:
     # Explicit bounds avoid exchange_calendars' rolling default date coverage.
     calendar = xcals.get_calendar(
-        "XNYS",
+        SPEC["calendar"]["name"],
         start=pd.Timestamp(start) - pd.Timedelta(days=7),
         end=pd.Timestamp(through) + pd.Timedelta(days=7),
     )
     return calendar.schedule.loc[start:through, ["open", "close"]].copy()
 
 
+@lru_cache(maxsize=32)
 def expected_index(frequency: Frequency, start: str, through: str) -> pd.DatetimeIndex:
     validate_frequency(frequency)
     schedule = session_schedule(start, through)
     if frequency == "1day":
-        index = schedule.index.tz_localize("America/New_York").tz_convert("UTC")
+        index = schedule.index.tz_localize(SPEC["calendar"]["timezone"]).tz_convert("UTC")
     else:
         pieces = [
             pd.date_range(row.open, row.close, freq="min", inclusive="left")
@@ -113,8 +113,8 @@ def clean_bars(
     observed = frame.close.notna()
     filled = pd.Series(False, index=expected)
     if frequency == "1min":
-        sessions = expected.tz_convert("America/New_York").normalize()
-        previous_close = frame.close.groupby(sessions).ffill(limit=5)
+        sessions = expected.tz_convert(SPEC["calendar"]["timezone"]).normalize()
+        previous_close = frame.close.groupby(sessions).ffill(limit=SPEC["calendar"]["fill_limit"])
         filled = ~observed & previous_close.notna()
         for column in ("open", "high", "low", "close"):
             frame.loc[filled, column] = previous_close[filled]
@@ -138,7 +138,8 @@ def split_boundaries(index: pd.DatetimeIndex) -> dict:
     """60/20/20 by the shared tier clock, never separately per symbol."""
     if len(index) < 5 or not index.is_monotonic_increasing or not index.is_unique:
         raise DataError("Splits need at least five ordered, unique timestamps")
-    first, second = int(len(index) * 0.6), int(len(index) * 0.8)
+    first = int(len(index) * SPEC["splits"]["IS"])
+    second = int(len(index) * (SPEC["splits"]["IS"] + SPEC["splits"]["OOS"]))
     # Inclusive bounds are convenient for Parquet predicate pushdown.
     return {
         name: {"start": index[left].isoformat(), "end": index[right - 1].isoformat()}
@@ -158,7 +159,9 @@ def load_bars(
     split: Literal["IS", "OOS", "HOLDOUT"],
     allow_holdout: bool = False,
 ) -> dict[str, pd.DataFrame]:
-    """Load just the requested partition; there is deliberately no ALL option."""
+    """Validate the complete stored dataset, then expose only the requested partition."""
+    from factory.data_contract.storage import read_dataset
+
     root = Path(root)
     validate_frequency(frequency)
     if split not in ("IS", "OOS", "HOLDOUT"):
@@ -168,6 +171,16 @@ def load_bars(
     manifest = json.loads((root / frequency / "manifest.json").read_text())
     if not manifest.get("complete"):
         raise DataError(f"{frequency} ingestion is incomplete")
+    try:
+        expected_splits = split_boundaries(
+            expected_index(frequency, manifest["start"], manifest["through"])
+        )
+        if manifest["splits"] != expected_splits or manifest["frequency"] != frequency:
+            fail(str(root / frequency), "split_interval", detail="Tier splits differ from contract")
+    except (KeyError, ValueError) as error:
+        if isinstance(error, DataError):
+            raise
+        fail(str(root / frequency), "manifest", detail="Invalid tier manifest")
     bounds = manifest["splits"][split]
     if not symbols or len(symbols) != len(set(symbols)):
         raise DataError("Universe must be nonempty and unique")
@@ -177,17 +190,18 @@ def load_bars(
         if symbol not in manifest["symbols"]:
             raise DataError(f"{symbol} is not in the {frequency} universe")
         path = root / frequency / f"{symbol}.parquet"
-        frame = pd.read_parquet(
+        frame = read_dataset(
             path,
-            columns=OHLCV,
-            filters=[
-                ("timestamp", ">=", pd.Timestamp(bounds["start"])),
-                ("timestamp", "<=", pd.Timestamp(bounds["end"])),
-            ],
+            expected={
+                "kind": "price_bars",
+                "frequency": frequency,
+                **{key: manifest[key] for key in ("start", "through", "feed", "adjustment")},
+            },
         )
+        frame = frame.loc[pd.Timestamp(bounds["start"]) : pd.Timestamp(bounds["end"])].copy()
         if frame.empty:
             raise DataError(f"No {split} data for {symbol}")
-        result[symbol] = normalize_bars(frame)
+        result[symbol] = frame
     return result
 
 

@@ -2,6 +2,7 @@
 
 import importlib.metadata
 import re
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,24 @@ OPERATIONS = {
     "pattern",
     "event_values",
 }
+RECORD_OPERATIONS = {
+    "entity_fields",
+    "session_interval",
+    "split_interval",
+    "manifest_content",
+    "session_derivation",
+    "activity",
+}
+
+
+def supported_dtype(dtype):
+    if dtype in {"string", "date_string", "utc_string", "int64", "float64", "object", "bool"}:
+        return True
+    try:
+        parsed = pd.api.types.pandas_dtype(dtype)
+    except (TypeError, ValueError):
+        return False
+    return isinstance(parsed, pd.DatetimeTZDtype) and parsed.unit == "ns"
 
 
 def reject(mask, frame, dataset, rule, detail=""):
@@ -103,13 +122,17 @@ def validate(spec, kind, frame, *, dataset, **context):
                 fail(dataset, name, frame, detail="Missing or invalid frequency")
             if not context.get("start") or not context.get("through"):
                 fail(dataset, name, frame, detail="Missing requested date bounds")
-            grid = expected_index(context["frequency"], context["start"], context["through"])
+            try:
+                grid = expected_index(context["frequency"], context["start"], context["through"])
+            except (ValueError, TypeError):
+                fail(dataset, name, frame, detail="Invalid requested calendar dates")
             reject(~frame.index.isin(grid), frame, dataset, name)
         elif op == "fill_shape":
             filled = frame.is_filled
-            bad = filled & (
-                (frame[["open", "high", "low", "close"]].nunique(axis=1) != 1) | frame.volume.ne(0)
+            flat = (
+                frame.open.eq(frame.close) & frame.high.eq(frame.close) & frame.low.eq(frame.close)
             )
+            bad = filled & (~flat | frame.volume.ne(0))
             if context["frequency"] == "1day":
                 bad |= filled
             reject(bad, frame, dataset, name)
@@ -146,7 +169,7 @@ def validate_entity(spec, entity, record, *, dataset):
         if name not in record:
             fail(dataset, "entity_fields", detail=f"Missing {entity}.{name}")
         value, dtype = record[name], info["dtype"]
-        valid = True
+        valid = False
         if dtype in ("string", "date_string", "utc_string"):
             valid = isinstance(value, str) and bool(value)
         elif dtype == "int64":
@@ -155,7 +178,9 @@ def validate_entity(spec, entity, record, *, dataset):
             valid = type(value) in (float, int) and np.isfinite(value)
         elif dtype == "object":
             valid = isinstance(value, dict)
-        elif dtype.startswith("datetime64"):
+        elif dtype == "bool":
+            valid = type(value) is bool
+        elif supported_dtype(dtype) and dtype.startswith("datetime64"):
             valid = (
                 isinstance(value, pd.Timestamp) and str(pd.DatetimeIndex([value]).dtype) == dtype
             )
@@ -179,6 +204,41 @@ def validate_entity(spec, entity, record, *, dataset):
                 fail(dataset, "entity_fields.timestamp", detail=name)
             if str(stamp.tz) != "UTC":
                 fail(dataset, "entity_fields.timestamp", detail=name)
-        if dtype == "date_string" and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
-            fail(dataset, "entity_fields.date", detail=name)
+        if dtype == "date_string":
+            try:
+                parsed = date.fromisoformat(value)
+                if parsed.isoformat() != value:
+                    raise ValueError("Date must be YYYY-MM-DD")
+            except ValueError:
+                fail(dataset, "entity_fields.date", detail=name)
+    if entity == "Session":
+        from factory.data import session_schedule
+
+        if importlib.metadata.version(spec["calendar"]["library"]) != spec["calendar"]["version"]:
+            fail(
+                dataset, "session_interval", detail="Calendar library version differs from contract"
+            )
+        session = record["session_date"]
+        if session != session.normalize() or str(session.tz) != spec["calendar"]["timezone"]:
+            fail(dataset, "session_interval", detail="Session date must be exchange-local midnight")
+        day = session.date().isoformat()
+        schedule = session_schedule(day, day)
+        if schedule.empty:
+            fail(dataset, "session_interval", detail="Date is not a scheduled session")
+        expected = schedule.iloc[0]
+        duration = (expected.close - expected.open).total_seconds() / 60
+        if (
+            record["open"] != expected.open
+            or record["close"] != expected.close
+            or record["duration_minutes"] != duration
+        ):
+            fail(
+                dataset, "session_interval", detail="Open, close or duration differs from calendar"
+            )
+    elif entity == "Split":
+        if (
+            pd.Timestamp(record["start"]) > pd.Timestamp(record["end"])
+            or record["fraction"] != spec["splits"][record["name"]]
+        ):
+            fail(dataset, "split_interval", detail="Reversed bounds or fraction differs from name")
     return record

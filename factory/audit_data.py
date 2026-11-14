@@ -11,20 +11,15 @@ import time
 from pathlib import Path
 
 import pandas as pd
-import pyarrow.parquet as pq
 
-from factory.data import DAILY_LIMITATION, INTRADAY_UNIVERSE, OHLCV, DataError, wide_frames
+from factory.data import DAILY_LIMITATION, INTRADAY_UNIVERSE, DataError, wide_frames
+from factory.data_contract.storage import read_dataset
 from factory.ingest_alpaca import atomic_json, daily_universe, event
 
 
 def check_nvda_split(root: Path, frequency: str) -> dict:
-    frame = pd.read_parquet(
-        root / frequency / "NVDA.parquet",
-        filters=[
-            ("timestamp", ">=", pd.Timestamp("2024-06-07", tz="UTC")),
-            ("timestamp", "<", pd.Timestamp("2024-06-11", tz="UTC")),
-        ],
-    )
+    frame = read_dataset(root / frequency / "NVDA.parquet")
+    frame = frame.loc["2024-06-07":"2024-06-10"]
     local_dates = frame.index.tz_convert("America/New_York").strftime("%Y-%m-%d")
     before, after = frame.loc[local_dates == "2024-06-07"], frame.loc[local_dates == "2024-06-10"]
     if before.empty or after.empty:
@@ -60,7 +55,7 @@ def audit(root: Path, *, benchmark: bool = True) -> dict:
             for symbol in universe:
                 path = root / frequency / f"{symbol}.parquet"
                 meta = json.loads((root / "metadata" / frequency / f"{symbol}.json").read_text())
-                rows = pq.ParquetFile(path).metadata.num_rows
+                rows = len(read_dataset(path))
                 if rows == 0 or rows != meta["rows"]:
                     raise DataError(f"{frequency}/{symbol}: empty file or metadata row mismatch")
                 if any(
@@ -88,7 +83,7 @@ def audit(root: Path, *, benchmark: bool = True) -> dict:
     ):
         started = time.perf_counter()
         bars = {
-            symbol: pd.read_parquet(root / "1min" / f"{symbol}.parquet", columns=OHLCV)
+            symbol: read_dataset(root / "1min" / f"{symbol}.parquet")
             for symbol in INTRADAY_UNIVERSE
         }
         frames = wide_frames(bars)

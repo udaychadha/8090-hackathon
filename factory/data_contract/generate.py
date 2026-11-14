@@ -20,12 +20,23 @@ def fingerprint(spec):
 
 
 def artifacts(spec):
-    from factory.data_contract.runtime import OPERATIONS
+    from factory.data_contract.runtime import OPERATIONS, RECORD_OPERATIONS, supported_dtype
 
     for kind in spec["datasets"].values():
         for rule in kind["invariants"]:
             if rule["op"] not in OPERATIONS:
                 raise ValueError(f"Unknown validation operation: {rule['op']}")
+    for rule in spec["record_invariants"]:
+        if rule["op"] not in RECORD_OPERATIONS:
+            raise ValueError(f"Unknown record validation operation: {rule['op']}")
+    for entity in [*spec["ontology"].values(), *spec["datasets"].values()]:
+        for group in ("fields", "derived_fields"):
+            for field, definition in entity.get(group, {}).items():
+                if not supported_dtype(definition["dtype"]):
+                    raise ValueError(f"Unknown field dtype for {field}: {definition['dtype']}")
+        for dtype in entity.get("extension_dtypes", []):
+            if not supported_dtype(dtype):
+                raise ValueError(f"Unknown extension dtype: {dtype}")
     digest = fingerprint(spec)
     lines = [
         f"# {spec['title']}",
@@ -72,6 +83,7 @@ def artifacts(spec):
             f"## Dataset kind: {name}",
             "",
             f"Extra columns allowed: {kind['extra_columns']}.",
+            f"Manifest constraints: `{json.dumps(kind.get('metadata', {}), sort_keys=True)}`.",
         ]
         if "fields" in kind:
             for field, definition in kind["fields"].items():

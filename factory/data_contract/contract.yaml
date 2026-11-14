@@ -1,4 +1,5 @@
 schema_version: '1.0.0'
+splits: {IS: 0.6, OOS: 0.2, HOLDOUT: 0.2}
 title: Market data and strategy-time contract
 calendar:
   name: XNYS
@@ -90,6 +91,7 @@ datasets:
   price_bars:
     entity: Bar
     extra_columns: false
+    metadata: {frequency: [1min, 1day], feed: [sip], adjustment: [all]}
     invariants:
       - {id: nonempty, op: nonempty, description: Stored datasets contain at least one row.}
       - {id: columns, op: schema, description: Physical columns and index match Bar fields and exact dtypes.}
@@ -103,6 +105,7 @@ datasets:
       - {id: fill_history, op: fill_history, description: Full stored minute files exactly reproduce the declared within-session fill rule from their observed rows.}
   events:
     extra_columns: true
+    metadata: {frequency: [event], feed: [user_supplied], adjustment: [not_applicable]}
     fields:
       available_at: {dtype: 'datetime64[ns, UTC]', units: instant, description: Earliest timestamp when the information could have been known.}
       symbol: {dtype: string, units: identifier, pattern: '^[A-Z][A-Z0-9.]{0,14}$', description: Instrument symbol to which the event applies.}

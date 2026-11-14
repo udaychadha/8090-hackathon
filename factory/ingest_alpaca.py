@@ -31,6 +31,8 @@ from factory.data import (
     split_boundaries,
     validate_symbol,
 )
+from factory.data_contract import validate_price_bars
+from factory.data_contract.storage import manifest_path, read_dataset, write_dataset
 
 DATA_URL = "https://data.alpaca.markets/v2/stocks/bars"
 SP500_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -44,11 +46,10 @@ def atomic_json(path: Path, payload: dict) -> None:
     temporary.replace(path)
 
 
-def atomic_parquet(path: Path, frame: pd.DataFrame) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".parquet.tmp")
-    frame.to_parquet(temporary, engine="pyarrow", compression="zstd", index=True)
-    temporary.replace(path)
+def atomic_parquet(path: Path, frame: pd.DataFrame, **context) -> None:
+    write_dataset(
+        path, frame, kind="price_bars", source=DATA_URL, feed="sip", adjustment="all", **context
+    )
 
 
 def event(root: Path, kind: str, **fields) -> None:
@@ -111,6 +112,19 @@ class AlpacaBars:
         raise AssertionError("unreachable")
 
     def fetch(self, symbol: str, frequency: str, start: str, through: str) -> pd.DataFrame:
+        raw = self._fetch_raw(symbol, frequency, start, through)
+        clean, stats = clean_bars(raw, frequency, start, through)
+        validate_price_bars(
+            clean,
+            dataset=f"alpaca/{frequency}/{symbol}",
+            frequency=frequency,
+            start=start,
+            through=through,
+        )
+        clean.attrs["ingest_stats"] = stats
+        return clean
+
+    def _fetch_raw(self, symbol: str, frequency: str, start: str, through: str) -> pd.DataFrame:
         validate_symbol(symbol)
         begin = pd.Timestamp(start, tz="America/New_York")
         end = pd.Timestamp(through, tz="America/New_York") + pd.DateOffset(days=1)
@@ -245,6 +259,17 @@ def ingest_symbol(
     if destination.exists() and metadata_path.exists():
         metadata = json.loads(metadata_path.read_text())
         if metadata.get("request_id") == request_id:
+            read_dataset(
+                destination,
+                expected={
+                    "kind": "price_bars",
+                    "frequency": frequency,
+                    "start": start,
+                    "through": through,
+                    "feed": "sip",
+                    "adjustment": "all",
+                },
+            )
             return metadata
     staging = root / ".staging" / frequency / symbol / request_id
     staging.mkdir(parents=True, exist_ok=True)
@@ -255,8 +280,11 @@ def ingest_symbol(
         stat_path = path.with_suffix(".json")
         if not (path.exists() and stat_path.exists()):
             raw = client.fetch(symbol, frequency, left, right)
-            clean, stat = clean_bars(raw, frequency, left, right)
-            atomic_parquet(path, clean)
+            if "ingest_stats" in raw.attrs:
+                clean, stat = raw, raw.attrs["ingest_stats"]
+            else:
+                clean, stat = clean_bars(raw, frequency, left, right)
+            atomic_parquet(path, clean, frequency=frequency, start=left, through=right)
             atomic_json(stat_path, stat)
             event(
                 root,
@@ -269,7 +297,12 @@ def ingest_symbol(
             )
         chunks.append(path)
         stats.append(json.loads(stat_path.read_text()))
-    frame = pd.concat([pd.read_parquet(path) for path in chunks]).sort_index()
+    frame = pd.concat(
+        [
+            read_dataset(path, expected={"kind": "price_bars", "frequency": frequency})
+            for path in chunks
+        ]
+    ).sort_index()
     if frame.empty:
         raise DataError(
             f"No bars returned for {symbol} ({frequency}); refusing an empty final file"
@@ -297,13 +330,21 @@ def ingest_symbol(
         "fill_rate": totals["filled_rows"] / totals["expected_rows"],
         "written_at": datetime.now(ZoneInfo("UTC")).isoformat(),
     }
-    atomic_parquet(destination, frame)
+    atomic_parquet(
+        destination,
+        frame,
+        frequency=frequency,
+        start=start,
+        through=through,
+        created_at=metadata["written_at"],
+    )
     atomic_json(metadata_path, metadata)
     event(root, "symbol_complete", **metadata)
     # Completed symbol files are the resume checkpoint; remove duplicate chunks.
     for path in chunks:
         path.unlink()
         path.with_suffix(".json").unlink()
+        manifest_path(path).unlink()
     return metadata
 
 

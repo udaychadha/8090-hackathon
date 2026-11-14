@@ -1,7 +1,7 @@
 # Market data and strategy-time contract
 
 <!-- GENERATED from factory/data_contract/contract.yaml; do not edit. -->
-Schema version: 1.0.0. Source SHA-256: `83beaf06c001264fced1d032085580c9313b983db2eef3af4ffbbb464536374c`.
+Schema version: 1.0.0. Source SHA-256: `710a14aeaab18348bfe3e864502dfdfc3072cabd7c7758715546ff75f45a4b91`.
 
 ## Meaning and use
 
@@ -121,6 +121,7 @@ Inclusive boundaries on the shared tier grid; not independently computed per sym
 ## Dataset kind: price_bars
 
 Extra columns allowed: False.
+Manifest constraints: `{"adjustment": ["all"], "feed": ["sip"], "frequency": ["1min", "1day"]}`.
 
 Invariants:
 
@@ -138,6 +139,7 @@ Invariants:
 ## Dataset kind: events
 
 Extra columns allowed: True.
+Manifest constraints: `{"adjustment": ["not_applicable"], "feed": ["user_supplied"], "frequency": ["event"]}`.
 - `available_at`: `datetime64[ns, UTC]`, instant. Earliest timestamp when the information could have been known.
 - `symbol`: `string`, identifier. Instrument symbol to which the event applies.
 Extension dtypes: float64, int64, bool, string, datetime64[ns, UTC].

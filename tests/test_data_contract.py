@@ -104,3 +104,117 @@ def test_generation_detects_edits_and_unknown_rules(tmp_path):
     spec["datasets"]["price_bars"]["invariants"][0]["op"] = "made_up"
     with pytest.raises(ValueError, match="Unknown"):
         generate(tmp_path, spec)
+
+
+@pytest.mark.parametrize("value", ["false", 0, 1, None])
+def test_record_boolean_rejects_non_booleans(value):
+    from factory.data_contract import DataError
+    from factory.data_contract.generate import read_contract
+    from factory.data_contract.runtime import validate_entity
+
+    record = frame().iloc[0].to_dict() | {"timestamp": frame().index[0]}
+    record["is_filled"] = value
+    with pytest.raises(DataError, match="SPY.*entity_fields.dtype.*is_filled"):
+        validate_entity(read_contract(), "Bar", record, dataset="SPY")
+
+
+def test_record_dates_are_real_calendar_dates():
+    from factory.data_contract import DataError
+    from factory.data_contract.generate import read_contract
+    from factory.data_contract.runtime import validate_entity
+
+    spec = read_contract()
+    # Exercise the actual Dataset field definition without unrelated provenance fields.
+    spec["ontology"]["Dataset"]["fields"] = {
+        "start": spec["ontology"]["Dataset"]["fields"]["start"]
+    }
+    for invalid in ("2024-99-99", "2023-02-29", "2024-02-30"):
+        with pytest.raises(DataError, match="SPY.*entity_fields.date.*start"):
+            validate_entity(spec, "Dataset", {"start": invalid}, dataset="SPY")
+    validate_entity(spec, "Dataset", {"start": "2024-02-29"}, dataset="SPY")
+
+
+def test_unsupported_record_dtype_fails_closed():
+    from factory.data_contract import DataError
+    from factory.data_contract.generate import read_contract
+    from factory.data_contract.runtime import validate_entity
+
+    spec = read_contract()
+    spec["ontology"]["Instrument"]["fields"]["symbol"]["dtype"] = "made_up"
+    with pytest.raises(DataError, match="SPY.*entity_fields.dtype"):
+        validate_entity(
+            spec,
+            "Instrument",
+            {
+                "symbol": "SPY",
+                "asset_class": "etf",
+                "currency": "USD",
+                "calendar": "XNYS",
+                "timezone": "America/New_York",
+            },
+            dataset="SPY",
+        )
+
+
+def test_unknown_dtype_fails_generation():
+    from factory.data_contract.generate import artifacts, read_contract
+
+    spec = read_contract()
+    spec["ontology"]["Instrument"]["fields"]["symbol"]["dtype"] = "made_up"
+    with pytest.raises(ValueError, match="Unknown.*dtype"):
+        artifacts(spec)
+
+
+def test_unknown_record_operation_fails_generation():
+    from factory.data_contract.generate import artifacts, read_contract
+
+    spec = read_contract()
+    spec["record_invariants"][0]["op"] = "made_up"
+    with pytest.raises(ValueError, match="Unknown.*operation"):
+        artifacts(spec)
+
+
+@pytest.mark.parametrize("change", ["open", "close", "duration_minutes", "session_date"])
+def test_session_records_match_the_scheduled_half_day(change):
+    from factory.data_contract import DataError
+    from factory.data_contract.generate import read_contract
+    from factory.data_contract.runtime import validate_entity
+
+    spec = read_contract()
+    record = {
+        "session_date": pd.Timestamp("2024-11-29", tz="America/New_York"),
+        "open": pd.Timestamp("2024-11-29T14:30:00Z"),
+        "close": pd.Timestamp("2024-11-29T18:00:00Z"),
+        "duration_minutes": 210,
+    }
+    validate_entity(spec, "Session", record, dataset="XNYS")
+    if change == "duration_minutes":
+        record[change] = 390
+    elif change == "session_date":
+        record[change] += pd.Timedelta(days=1)
+    else:
+        record[change] += pd.Timedelta(minutes=1)
+    with pytest.raises(DataError, match="XNYS.*session_interval"):
+        validate_entity(spec, "Session", record, dataset="XNYS")
+
+
+@pytest.mark.parametrize("change", ["interval", "fraction"])
+def test_split_record_interval_and_name_fraction(change):
+    from factory.data_contract import DataError
+    from factory.data_contract.generate import read_contract
+    from factory.data_contract.runtime import validate_entity
+
+    spec = read_contract()
+    record = {
+        "name": "IS",
+        "start": "2024-03-11T13:30:00Z",
+        "end": "2024-03-11T19:59:00Z",
+        "fraction": 0.6,
+    }
+    validate_entity(spec, "Split", record, dataset="1min")
+    if change == "interval":
+        record["start"], record["end"] = record["end"], record["start"]
+    else:
+        record["fraction"] = 0.2
+    with pytest.raises(DataError, match="1min.*split_interval"):
+        validate_entity(spec, "Split", record, dataset="1min")
