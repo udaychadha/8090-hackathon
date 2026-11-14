@@ -79,6 +79,15 @@ def test_io_wall_clock_and_reflection_fail_source_policy(valid_source, expressio
         parse_strategy(source)
 
 
+def test_now_stock_symbol_is_not_a_clock_request(valid_source):
+    source = valid_source.replace('"SPY"', '"NOW"')
+    assert parse_strategy(source).universe == ("NOW",)
+    for token in ("NOW", "now", "today"):
+        clock = source.replace('bars["NOW"].index', f'pd.Timestamp("{token}")')
+        with pytest.raises(ContractViolation, match="Wall-clock"):
+            parse_strategy(clock)
+
+
 def test_unseeded_rng_rejected_and_seeded_rng_allowed(valid_source):
     source = "import numpy as np\n" + valid_source
     source = source.replace('PARAMS = {"weight": 0.25}', 'PARAMS = {"weight": 0.25, "seed": 7}')

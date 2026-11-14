@@ -370,6 +370,7 @@ def parse_strategy(
     except SyntaxError as error:
         raise ContractViolation(f"Syntax error at line {error.lineno}: {error.msg}") from error
     metadata, parameter_node, functions, imported_names = {}, None, set(), set()
+    universe_node = None
     for node in tree.body:
         if (
             isinstance(node, ast.Expr)
@@ -414,6 +415,8 @@ def parse_strategy(
                 raise ContractViolation(f"{key} must be a literal") from error
             if key == "PARAMS":
                 parameter_node = node.value
+            elif key == "UNIVERSE":
+                universe_node = node.value
         elif isinstance(node, ast.FunctionDef):
             if node.decorator_list or node.name in functions or node.name.startswith("_"):
                 raise ContractViolation(
@@ -446,6 +449,19 @@ def parse_strategy(
     extra = validate_extra_names(metadata.get("EXTRA", []))
     params = validate_params(metadata["PARAMS"])
     parameter_nodes = set(ast.walk(parameter_node))
+    # A validated instrument literal such as ServiceNow's NOW ticker is not a
+    # clock request. Exempt only metadata and direct bars dictionary keys; a
+    # datetime constructor still cannot consume the literal 'now' in any case.
+    symbol_nodes = set(ast.walk(universe_node))
+    symbol_nodes.update(
+        node.slice
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "bars"
+        and isinstance(node.slice, ast.Constant)
+        and node.slice.value in universe
+    )
     for node in ast.walk(tree):
         if node in parameter_nodes:
             continue
@@ -462,7 +478,11 @@ def parse_strategy(
         if isinstance(node, ast.Constant):
             if type(node.value) in (int, float, complex) and node.value not in (0, 1):
                 raise ContractViolation(f"Move numeric literal at line {node.lineno} into PARAMS")
-            if isinstance(node.value, str) and node.value.lower() in ("now", "today"):
+            if (
+                isinstance(node.value, str)
+                and node.value.lower() in ("now", "today")
+                and node not in symbol_nodes
+            ):
                 raise ContractViolation("Wall-clock values are forbidden")
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name):

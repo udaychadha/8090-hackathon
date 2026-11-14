@@ -56,7 +56,7 @@
     "factory/evals/sensitivity.py": "b2cbede778eb8179e452c499f2150ecfef7500aa9f587d7a136f3b96ffa80845"
   },
   "sha256": {
-    "factory/contract.py": "7a52bd5312b6df3595b10acd4968cfc9618da7a60ff10ef25fa07c8cf6d84ab3",
+    "factory/contract.py": "a36e4340af1e3086896853cd430792ff46ea3fc492d264436b17d059758a43c3",
     "factory/evals/__init__.py": "030c4381803aa07d06c7886b1cb45e7606df327d60ee0846160dc442dbbfb570",
     "factory/evals/common.py": "5cace8afb808207b8b7a7d97fff6e7c519b49e4bf68e6521cbaffebb70a38af3",
     "factory/evals/config.py": "2fd62dd9330894949b24ee38030ff5b2b10475972a563dfbbb55e689281ee447",
