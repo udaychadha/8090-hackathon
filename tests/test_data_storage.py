@@ -209,3 +209,182 @@ def test_bad_requested_dates_have_dataerror_context(tmp_path):
             feed="sip",
             adjustment="all",
         )
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "string_complete",
+        "integer_complete",
+        "null",
+        "array",
+        "missing_feed",
+        "missing_symbols",
+        "duplicate_symbols",
+        "invalid_symbol",
+        "symbol_string",
+        "reversed_dates",
+        "invalid_dates",
+        "extra_split",
+        "failed_complete",
+        "bad_version",
+        "missing_file",
+        "bad_json",
+    ],
+)
+def test_tier_manifest_fails_closed_with_context(tmp_path, fault):
+    from factory.data_contract import DataError
+
+    path = store(tmp_path).parent / "manifest.json"
+    entry = json.loads(path.read_text())
+    changes = {
+        "string_complete": ("complete", "false"),
+        "integer_complete": ("complete", 1),
+        "duplicate_symbols": ("symbols", ["SPY", "SPY"]),
+        "invalid_symbol": ("symbols", ["SPY", "../QQQ"]),
+        "symbol_string": ("symbols", "SPY"),
+        "reversed_dates": ("through", "2024-06-01"),
+        "invalid_dates": ("start", "2024-99-99"),
+        "failed_complete": ("failed_symbols", ["SPY"]),
+        "bad_version": ("normalizer_version", True),
+    }
+    if fault in changes:
+        key, value = changes[fault]
+        entry[key] = value
+    elif fault.startswith("missing_") and fault != "missing_file":
+        del entry[fault.removeprefix("missing_")]
+    elif fault == "extra_split":
+        entry["splits"]["EXTRA"] = entry["splits"]["IS"]
+    elif fault in ("null", "array"):
+        entry = None if fault == "null" else []
+    path.write_text("{" if fault == "bad_json" else json.dumps(entry))
+    if fault == "missing_file":
+        path.unlink()
+    with pytest.raises(DataError, match=r"1day.*rule=.*row="):
+        load_bars(tmp_path, "1day", ["SPY"], split="IS")
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "rows",
+        "filled_rows",
+        "missing_rows",
+        "expected_rows",
+        "observed_rows",
+        "source_rows",
+        "off_session_rows",
+        "negative_source",
+        "boolean_counter",
+        "fill_rate",
+        "null",
+        "missing_counter",
+        "bad_json",
+        "wrong_chunk_dates",
+    ],
+)
+def test_bad_staging_metadata_cannot_publish_a_completed_dataset(tmp_path, monkeypatch, fault):
+    from factory import ingest_alpaca as ingest
+    from factory.data_contract import DataError
+    from factory.data_contract.storage import manifest_path
+
+    class Client:
+        def fetch(self, *args):
+            return daily().drop(columns="is_filled")
+
+    original = ingest.atomic_parquet
+
+    def interrupt_final(path, *args, **kwargs):
+        if ".staging" not in path.parts:
+            raise OSError("interrupted final write")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(ingest, "atomic_parquet", interrupt_final)
+    with pytest.raises(OSError, match="interrupted"):
+        ingest.ingest_symbol(Client(), tmp_path, "1day", "SPY", "2024-06-03", "2024-06-14")
+    monkeypatch.setattr(ingest, "atomic_parquet", original)
+    chunk = next((tmp_path / ".staging").rglob("*.parquet"))
+    stat_path = chunk.with_suffix(".json")
+    stats = json.loads(stat_path.read_text())
+    if fault == "negative_source":
+        stats["source_rows"] = -1
+    elif fault == "boolean_counter":
+        stats["off_session_rows"] = False
+    elif fault == "null":
+        stats = None
+    elif fault == "missing_counter":
+        del stats["source_rows"]
+    elif fault == "wrong_chunk_dates":
+        manifest = json.loads(manifest_path(chunk).read_text())
+        manifest["start"] = "2024-06-01"
+        manifest_path(chunk).write_text(json.dumps(manifest))
+    elif fault != "bad_json":
+        stats[fault] += 1
+    stat_path.write_text("{" if fault == "bad_json" else json.dumps(stats))
+    with pytest.raises(DataError, match=r"SPY.*rule=.*row="):
+        ingest.ingest_symbol(Client(), tmp_path, "1day", "SPY", "2024-06-03", "2024-06-14")
+    assert not (tmp_path / "1day/SPY.parquet").exists()
+    events = [json.loads(line) for line in (tmp_path / "ingest.jsonl").read_text().splitlines()]
+    assert not any(event["event"] == "symbol_complete" for event in events)
+
+
+def test_completed_resume_rejects_false_counters_without_provider_calls(tmp_path):
+    from factory.data_contract import DataError
+    from factory.ingest_alpaca import ingest_symbol
+
+    class Client:
+        calls = 0
+
+        def fetch(self, *args):
+            self.calls += 1
+            return daily().drop(columns="is_filled")
+
+    client = Client()
+    ingest_symbol(client, tmp_path, "1day", "SPY", "2024-06-03", "2024-06-14")
+    path = tmp_path / "metadata/1day/SPY.json"
+    entry = json.loads(path.read_text())
+    entry["rows"] = -900
+    path.write_text(json.dumps(entry))
+    with pytest.raises(DataError, match=r"SPY.*rule=.*row="):
+        ingest_symbol(client, tmp_path, "1day", "SPY", "2024-06-03", "2024-06-14")
+    assert client.calls == 1
+
+
+@pytest.mark.parametrize("operation", ["write", "read"])
+@pytest.mark.parametrize("fault", ["before", "after", "reversed"])
+def test_event_requested_dates_are_enforced_on_write_and_read(tmp_path, operation, fault):
+    from factory.data_contract import DataError
+    from factory.data_contract.storage import manifest_path, read_dataset, write_dataset
+
+    frame = pd.DataFrame(
+        {
+            "available_at": pd.to_datetime(["2024-06-03T13:00Z", "2024-06-04T03:59Z"]),
+            "symbol": pd.Series(["SPY", "SPY"], dtype="string"),
+        }
+    )
+    path = tmp_path / "events.parquet"
+    metadata = dict(
+        kind="events",
+        frequency="event",
+        start="2024-06-03",
+        through="2024-06-03",
+        source="test",
+        feed="user_supplied",
+        adjustment="not_applicable",
+    )
+    write_dataset(path, frame, **metadata)
+    # Both timestamps fall on June 3 in the exchange timezone, even though UTC differs.
+    pd.testing.assert_frame_equal(read_dataset(path), frame)
+    bounds = {
+        "before": {"start": "2024-06-04", "through": "2024-06-04"},
+        "after": {"start": "2024-06-02", "through": "2024-06-02"},
+        "reversed": {"start": "2024-06-04", "through": "2024-06-03"},
+    }[fault]
+    if operation == "read":
+        entry = json.loads(manifest_path(path).read_text())
+        manifest_path(path).write_text(json.dumps({**entry, **bounds}))
+    with pytest.raises(DataError, match=r"events.*rule=manifest.date_range.*row="):
+        if operation == "write":
+            write_dataset(path, frame, **{**metadata, **bounds})
+        else:
+            read_dataset(path)

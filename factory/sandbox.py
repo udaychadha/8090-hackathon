@@ -23,7 +23,12 @@ from factory.contract import (
     validate_params,
     validate_weights,
 )
-from factory.data import OHLCV
+from factory.data_contract import DataError
+from factory.data_contract.sessions import (
+    add_session_columns,
+    protected_session_columns,
+    validate_session_columns,
+)
 
 
 class StrategyExecutionError(RuntimeError):
@@ -56,12 +61,20 @@ def run_strategy(
     definition = read_strategy(path, available_universe=list(bars))
     selected = {symbol: bars[symbol] for symbol in definition.universe}
     index = validate_bars(selected)
+    try:
+        for symbol, frame in selected.items():
+            if set(protected_session_columns()) & set(frame.columns):
+                validate_session_columns(frame, definition.frequency, symbol)
+            else:
+                selected[symbol] = add_session_columns(frame, definition.frequency)
+    except DataError as error:
+        raise ContractViolation(str(error)) from error
     parameters = validate_params(definition.params if params is None else params, definition.params)
     with tempfile.TemporaryDirectory(prefix="arena-strategy-") as directory:
         cwd = Path(directory)
         (cwd / "strategy.py").write_text(definition.source)
         for symbol, frame in selected.items():
-            frame[OHLCV].to_parquet(cwd / f"{symbol}.parquet", index=True)
+            frame.to_parquet(cwd / f"{symbol}.parquet", index=True)
         (cwd / "request.json").write_text(
             json.dumps(
                 {

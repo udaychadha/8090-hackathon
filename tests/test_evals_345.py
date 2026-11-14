@@ -74,7 +74,9 @@ def test_sensitivity_verdict_known_answers():
 
 
 def trending_bars(days=300):
-    index = pd.date_range("2020-01-02T05:00:00Z", periods=days, freq="B", name="timestamp")
+    from factory.data import expected_index
+
+    index = expected_index("1day", "2020-01-02", "2024-12-31")[:days]
     steps = np.where(np.arange(days) % 2 == 0, 0.004, -0.002)
     close = 100 * np.exp(np.cumsum(steps))
     return {
@@ -222,7 +224,9 @@ def test_deflated_eval_pass_and_fail_known_cases():
 
 def split_bars(symbols, days=500, seed=3):
     rng = np.random.default_rng(seed)
-    index = pd.date_range("2020-01-02T05:00:00Z", periods=days, freq="B", name="timestamp")
+    from factory.data import expected_index
+
+    index = expected_index("1day", "2020-01-02", "2024-12-31")[:days]
     bars = {}
     for symbol in symbols:
         close = 100 * np.exp(np.cumsum(rng.normal(0.0003, 0.008, days)))

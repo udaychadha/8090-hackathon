@@ -6,7 +6,6 @@ select IS or OOS; HOLDOUT requires an explicit opt-in reserved for WO-09.
 
 from __future__ import annotations
 
-import json
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -151,6 +150,48 @@ def split_boundaries(index: pd.DatetimeIndex) -> dict:
     }
 
 
+def validate_tier_manifest(manifest, frequency, *, dataset):
+    """Validate every tier field before trusting completion or partition bounds."""
+    from factory.data_contract.storage import validate_request_metadata
+
+    if not isinstance(manifest, dict):
+        fail(dataset, "manifest.shape", detail="Expected a metadata object")
+    validate_request_metadata(manifest, kind="price_bars", dataset=dataset)
+    if manifest["frequency"] != frequency:
+        fail(dataset, "manifest.frequency", detail=f"Expected {frequency}")
+    if type(manifest.get("complete")) is not bool:
+        fail(dataset, "manifest.complete", detail="Completion must be a boolean")
+    symbols = manifest.get("symbols")
+    if not isinstance(symbols, list) or not symbols:
+        fail(dataset, "manifest.symbols", detail="Expected a nonempty symbol list")
+    pattern = SPEC["ontology"]["Instrument"]["fields"]["symbol"]["pattern"]
+    if any(not isinstance(symbol, str) or not re.fullmatch(pattern, symbol) for symbol in symbols):
+        fail(dataset, "manifest.symbols", detail="Invalid symbol")
+    if len(set(symbols)) != len(symbols):
+        fail(dataset, "manifest.symbols", detail="Symbols must be unique")
+    if "normalizer_version" in manifest and (
+        type(manifest["normalizer_version"]) is not int or manifest["normalizer_version"] < 1
+    ):
+        fail(dataset, "manifest.normalizer_version", detail="Expected a positive integer")
+    failed = manifest.get("failed_symbols", [])
+    if (
+        not isinstance(failed, list)
+        or any(not isinstance(symbol, str) or symbol not in symbols for symbol in failed)
+        or len(set(failed)) != len(failed)
+        or (manifest["complete"] and failed)
+    ):
+        fail(dataset, "manifest.failed_symbols", detail="Failed symbols contradict tier state")
+    try:
+        expected_splits = split_boundaries(
+            expected_index(frequency, manifest["start"], manifest["through"])
+        )
+    except (ValueError, TypeError) as error:
+        fail(dataset, "split_interval", detail=f"Invalid tier grid: {type(error).__name__}")
+    if manifest.get("splits") != expected_splits:
+        fail(dataset, "split_interval", detail="Tier splits differ from contract")
+    return manifest
+
+
 def load_bars(
     root: Path | str,
     frequency: Frequency,
@@ -160,7 +201,8 @@ def load_bars(
     allow_holdout: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """Validate the complete stored dataset, then expose only the requested partition."""
-    from factory.data_contract.storage import read_dataset
+    from factory.data_contract.sessions import add_session_columns
+    from factory.data_contract.storage import read_dataset, read_metadata
 
     root = Path(root)
     validate_frequency(frequency)
@@ -168,19 +210,10 @@ def load_bars(
         raise DataError(f"Unknown split: {split}")
     if split == "HOLDOUT" and not allow_holdout:
         raise DataError("HOLDOUT is sealed until WO-09")
-    manifest = json.loads((root / frequency / "manifest.json").read_text())
-    if not manifest.get("complete"):
-        raise DataError(f"{frequency} ingestion is incomplete")
-    try:
-        expected_splits = split_boundaries(
-            expected_index(frequency, manifest["start"], manifest["through"])
-        )
-        if manifest["splits"] != expected_splits or manifest["frequency"] != frequency:
-            fail(str(root / frequency), "split_interval", detail="Tier splits differ from contract")
-    except (KeyError, ValueError) as error:
-        if isinstance(error, DataError):
-            raise
-        fail(str(root / frequency), "manifest", detail="Invalid tier manifest")
+    tier_path = root / frequency / "manifest.json"
+    manifest = validate_tier_manifest(read_metadata(tier_path), frequency, dataset=str(tier_path))
+    if not manifest["complete"]:
+        fail(str(tier_path), "manifest.complete", detail="Tier ingestion is incomplete")
     bounds = manifest["splits"][split]
     if not symbols or len(symbols) != len(set(symbols)):
         raise DataError("Universe must be nonempty and unique")
@@ -201,6 +234,8 @@ def load_bars(
         frame = frame.loc[pd.Timestamp(bounds["start"]) : pd.Timestamp(bounds["end"])].copy()
         if frame.empty:
             raise DataError(f"No {split} data for {symbol}")
+        frame = add_session_columns(frame, frequency)
+        frame.attrs["split"] = split
         result[symbol] = frame
     return result
 

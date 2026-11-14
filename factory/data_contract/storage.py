@@ -13,6 +13,38 @@ from factory.data_contract.generated import SPEC, validate_events, validate_pric
 from factory.data_contract.runtime import validate_entity
 
 
+def read_metadata(path):
+    """Read an object-shaped metadata document with dataset error context."""
+    try:
+        entry = json.loads(Path(path).read_text())
+    except (OSError, ValueError, TypeError) as error:
+        fail(str(path), "manifest.read", detail=f"Cannot read metadata: {type(error).__name__}")
+    if not isinstance(entry, dict):
+        fail(str(path), "manifest.shape", detail="Expected a metadata object")
+    return entry
+
+
+def validate_request_metadata(entry, *, kind, dataset):
+    """Reuse canonical Dataset definitions for a tier or file's request context."""
+    fields = SPEC["ontology"]["Dataset"]["fields"]
+    context_spec = {
+        "ontology": {
+            "Dataset": {
+                "fields": {
+                    key: fields[key]
+                    for key in ("frequency", "feed", "adjustment", "start", "through")
+                }
+            }
+        }
+    }
+    validate_entity(context_spec, "Dataset", entry, dataset=dataset)
+    for key, allowed in SPEC["datasets"][kind]["metadata"].items():
+        if entry[key] not in allowed:
+            fail(dataset, f"manifest.{key}", detail=f"Expected one of {allowed}")
+    if entry["start"] > entry["through"]:
+        fail(dataset, "manifest.date_range", detail="Requested dates are reversed")
+
+
 def manifest_path(path):
     return Path(path).with_suffix(".manifest.json")
 
@@ -32,9 +64,21 @@ def _validate(frame, entry, dataset):
         )
     else:
         validate_events(frame, dataset=dataset)
-    for key, allowed in SPEC["datasets"][kind]["metadata"].items():
-        if entry.get(key) not in allowed:
-            fail(dataset, f"manifest.{key}", frame, detail=f"Expected one of {allowed}")
+    validate_request_metadata(entry, kind=kind, dataset=dataset)
+    if kind == "events":
+        dates = frame.available_at.dt.tz_convert(SPEC["calendar"]["timezone"]).dt.strftime(
+            "%Y-%m-%d"
+        )
+        outside = (dates < entry["start"]) | (dates > entry["through"])
+        if outside.any():
+            position = outside.to_numpy().nonzero()[0][0]
+            fail(
+                dataset,
+                "manifest.date_range",
+                frame,
+                position,
+                detail="Event availability date is outside requested exchange-local dates",
+            )
 
 
 def _facts(frame, entry):
@@ -67,8 +111,6 @@ def _entry(path, frame, metadata):
     entry.update(_facts(frame, entry))
     # Validate metadata before any destination file is touched.
     validate_entity(SPEC, "Dataset", {**entry, "sha256": "0" * 64}, dataset=str(path))
-    if entry["start"] > entry["through"]:
-        fail(str(path), "manifest.date_range", frame, detail="Requested dates are reversed")
     return entry
 
 
@@ -123,7 +165,7 @@ def read_dataset(path, *, expected=None):
     """Validate the whole file before returning any subset to a caller."""
     path = Path(path)
     try:
-        entry = json.loads(manifest_path(path).read_text())
+        entry = read_metadata(manifest_path(path))
         validate_entity(SPEC, "Dataset", entry, dataset=str(path))
         if _digest(path) != entry["sha256"]:
             fail(str(path), "manifest.sha256", detail="File differs from validated manifest")

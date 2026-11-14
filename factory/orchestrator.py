@@ -14,7 +14,9 @@ from factory.agents.critic import critique
 from factory.agents.extractor import ExtractionError, extract, paper_metadata
 from factory.agents.records import Records, usage_record
 from factory.agents.worker import VARIANTS, RepairFailure, propose_parallel, validate_and_heal
+from factory.contract import InactiveStrategy
 from factory.data import DataError, load_bars
+from factory.data_contract.prompts import worker_context
 from factory.evals.common import EvalResult
 from factory.evals.lookahead import LookaheadBiasError
 from factory.evals.runner import with_deflated
@@ -89,26 +91,7 @@ def run_paper(paper, *, data_root="data", output_root="."):
         records.put("data_needs", need["id"], run_id, need)
         summary["data_needs"] = [need]
         records.event(run_id, "data", "passed", "Existing price tiers ready")
-        schema = {
-            symbol: {
-                "columns": list(frame.columns),
-                "dtypes": {name: str(dtype) for name, dtype in frame.dtypes.items()},
-                "index": "UTC DatetimeIndex",
-                "bar_timing": (
-                    "Minute timestamps label bar START. The close becomes available one minute "
-                    "later. XNYS regular sessions include 09:30 through 15:59 New York time; "
-                    "there is no 16:00 bar. On 13:00 early closes the final bar is 12:59. A target "
-                    "at t earns the next bar's close-to-close return via the engine's lag. "
-                    "Use this convention to map the paper's clock-time endpoints; do not "
-                    "assume bars are end-labelled or shift weights yourself."
-                    if spec.frequency == "1min"
-                    else "Daily timestamps identify the session at New York midnight. OHLCV "
-                    "is available after that session closes. A target at t earns the next "
-                    "session's close-to-close return via the engine's lag."
-                ),
-            }
-            for symbol, frame in is_bars.items()
-        }
+        schema = worker_context(is_bars, spec.frequency)
         for variant in VARIANTS:
             records.event(run_id, "worker", "started", "Generating strategy", variant=variant)
         proposals = propose_parallel(spec, schema)
@@ -136,6 +119,17 @@ def run_paper(paper, *, data_root="data", output_root="."):
                     row["status"] = "BUG_UNRESOLVED"
                     continue
                 row["params"] = definition.params
+            except InactiveStrategy as error:
+                usages.extend(usage_record(item) for item in error.usages)
+                row.update(
+                    status=error.status,
+                    activity={"IS": error.activity},
+                    days_traded=error.activity["days_traded"],
+                    eval_eligible=False,
+                )
+                row["code"] = path.read_text()
+                row["notes"].append(str(error))
+                continue
             except Exception as error:
                 if isinstance(error, RepairFailure):
                     usages.extend(usage_record(item) for item in error.usages)
@@ -150,6 +144,7 @@ def run_paper(paper, *, data_root="data", output_root="."):
                 )
                 continue
             records.event(run_id, "eval", "started", "Running all five evals", variant=variant)
+            row["eval_eligible"] = True
             try:
                 # No failed metric or OOS exception is ever fed back to workers.
                 evaluation = evaluate_file(path, data_root)
@@ -157,6 +152,8 @@ def run_paper(paper, *, data_root="data", output_root="."):
                 row["equity"] = evaluation.equity
                 row["equity_boundaries"] = evaluation.boundaries
                 row["activity"] = evaluation.activity
+                if evaluation.activity:
+                    row["days_traded"] = evaluation.activity["IS"].get("days_traded")
                 if evaluation.activity and evaluation.activity["IS"]["active_bars"] == 0:
                     row["notes"].append(
                         "No executed exposure in IS; the strategy hypothesis was not exercised."
@@ -284,6 +281,8 @@ def _row(spec, run_id, variant):
         "break_even_bps": None,
         "evals_passed": 0,
         "status": "RUNNING",
+        "eval_eligible": False,
+        "days_traded": None,
         "notes": [SURVIVORSHIP] if spec.frequency == "1day" else [],
     }
 

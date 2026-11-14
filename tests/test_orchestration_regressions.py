@@ -118,9 +118,15 @@ def test_prompts_cli_records_and_graveyard_redact(run_fixture, monkeypatch, tmp_
 
 
 def test_intraday_worker_receives_real_bar_clock(run_fixture, monkeypatch, tmp_path):
+    from factory.data import OHLCV, expected_index
+
     usage, _, _ = run_fixture
     intraday = spec().model_copy(update={"frequency": "1min"})
     monkeypatch.setattr(orchestrator, "extract", lambda *a, **kw: (intraday, usage))
+    frame = pd.DataFrame(
+        {c: 100.0 for c in OHLCV}, index=expected_index("1min", "2024-03-11", "2024-03-12")
+    )
+    monkeypatch.setattr(orchestrator, "load_bars", lambda *a, **kw: {"SPY": frame})
     captured = []
 
     def propose(spec, schema):
@@ -129,6 +135,35 @@ def test_intraday_worker_receives_real_bar_clock(run_fixture, monkeypatch, tmp_p
 
     monkeypatch.setattr(orchestrator, "propose_parallel", propose)
     orchestrator.run_paper("stub.pdf", output_root=tmp_path)
-    timing = captured[0]["SPY"]["bar_timing"]
+    timing = captured[0]["data_contract"]
     assert "bar START" in timing and "15:59" in timing and "no 16:00 bar" in timing
     assert "next bar's close-to-close return" in timing
+
+
+def test_inactive_lane_stops_before_evals_without_poisoning_siblings(
+    run_fixture, monkeypatch, tmp_path
+):
+    from factory.contract import InactiveStrategy
+
+    _, heal, evaluate = run_fixture
+    evaluated = []
+
+    def inactive(s, variant, *args):
+        result = heal(s, variant, *args)
+        if variant == "A":
+            raise InactiveStrategy({"active_bars": 0, "total_bars": 40, "days_traded": 0})
+        return result
+
+    def capture(path, *args):
+        evaluated.append(Path(path).stem)
+        return evaluate(path, *args)
+
+    monkeypatch.setattr(orchestrator, "validate_and_heal", inactive)
+    monkeypatch.setattr(orchestrator, "evaluate_file", capture)
+    result = orchestrator.run_paper("stub.pdf", output_root=tmp_path)
+    assert evaluated == ["B", "C"]
+    a, b, c = result["variants"]
+    assert a["status"] == "INACTIVE" and a["evals_passed"] == 0
+    assert a["days_traded"] == 0 and a["eval_eligible"] is False
+    assert b["status"] == c["status"] == "VERIFIED"
+    assert result["status"] == "COMPLETED"

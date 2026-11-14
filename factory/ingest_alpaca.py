@@ -30,9 +30,11 @@ from factory.data import (
     expected_index,
     split_boundaries,
     validate_symbol,
+    validate_tier_manifest,
 )
 from factory.data_contract import validate_price_bars
-from factory.data_contract.storage import manifest_path, read_dataset, write_dataset
+from factory.data_contract.errors import fail
+from factory.data_contract.storage import manifest_path, read_dataset, read_metadata, write_dataset
 
 DATA_URL = "https://data.alpaca.markets/v2/stocks/bars"
 SP500_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -241,6 +243,34 @@ def month_ranges(start: str, through: str):
         left = right + pd.Timedelta(days=1)
 
 
+def _validate_stats(stats, frame, frequency, start, through, *, dataset):
+    """Reconcile retained-data counts; check consistency of unavailable raw counts."""
+    if not isinstance(stats, dict):
+        fail(dataset, "ingest_stats.shape", detail="Expected a statistics object")
+    expected_rows = len(expected_index(frequency, start, through))
+    filled_rows = int(frame.is_filled.sum())
+    facts = {
+        "expected_rows": expected_rows,
+        "observed_rows": len(frame) - filled_rows,
+        "filled_rows": filled_rows,
+        "missing_rows": expected_rows - len(frame),
+        "rows": len(frame),
+    }
+    for key in (*facts, "source_rows", "off_session_rows"):
+        if type(stats.get(key)) is not int or stats[key] < 0:
+            fail(dataset, f"ingest_stats.{key}", detail="Expected a nonnegative integer")
+        if key in facts and stats[key] != facts[key]:
+            fail(dataset, f"ingest_stats.{key}", detail=f"Expected {facts[key]}")
+    if stats["source_rows"] - stats["off_session_rows"] != facts["observed_rows"]:
+        fail(dataset, "ingest_stats.source_rows", detail="Source/off-session counts disagree")
+    if (
+        type(stats.get("fill_rate")) not in (int, float)
+        or stats["fill_rate"] != filled_rows / expected_rows
+    ):
+        fail(dataset, "ingest_stats.fill_rate", detail="Fill rate differs from validated bars")
+    return stats
+
+
 def ingest_symbol(
     client, root: Path, frequency: str, symbol: str, start: str, through: str
 ) -> dict:
@@ -257,9 +287,9 @@ def ingest_symbol(
     destination = root / frequency / f"{symbol}.parquet"
     metadata_path = root / "metadata" / frequency / f"{symbol}.json"
     if destination.exists() and metadata_path.exists():
-        metadata = json.loads(metadata_path.read_text())
+        metadata = read_metadata(metadata_path)
         if metadata.get("request_id") == request_id:
-            read_dataset(
+            frame = read_dataset(
                 destination,
                 expected={
                     "kind": "price_bars",
@@ -270,10 +300,20 @@ def ingest_symbol(
                     "adjustment": "all",
                 },
             )
+            _validate_stats(metadata, frame, frequency, start, through, dataset=str(metadata_path))
+            for key, value in request.items():
+                if metadata.get(key) != value:
+                    fail(str(metadata_path), f"manifest.{key}", detail="Request metadata differs")
+            for key, value in {
+                "first_timestamp": frame.index[0].isoformat(),
+                "last_timestamp": frame.index[-1].isoformat(),
+            }.items():
+                if metadata.get(key) != value:
+                    fail(str(metadata_path), f"manifest.{key}", detail="Stored bounds differ")
             return metadata
     staging = root / ".staging" / frequency / symbol / request_id
     staging.mkdir(parents=True, exist_ok=True)
-    chunks, stats = [], []
+    chunks, stats, frames = [], [], []
     ranges = month_ranges(start, through) if frequency == "1min" else [(start, through)]
     for left, right in ranges:
         path = staging / f"{left}_{right}.parquet"
@@ -284,6 +324,10 @@ def ingest_symbol(
                 clean, stat = raw, raw.attrs["ingest_stats"]
             else:
                 clean, stat = clean_bars(raw, frequency, left, right)
+            validate_price_bars(
+                clean, dataset=str(path), frequency=frequency, start=left, through=right
+            )
+            _validate_stats(stat, clean, frequency, left, right, dataset=str(stat_path))
             atomic_parquet(path, clean, frequency=frequency, start=left, through=right)
             atomic_json(stat_path, stat)
             event(
@@ -296,13 +340,25 @@ def ingest_symbol(
                 **stat,
             )
         chunks.append(path)
-        stats.append(json.loads(stat_path.read_text()))
-    frame = pd.concat(
-        [
-            read_dataset(path, expected={"kind": "price_bars", "frequency": frequency})
-            for path in chunks
-        ]
-    ).sort_index()
+        chunk = read_dataset(
+            path,
+            expected={
+                "kind": "price_bars",
+                "frequency": frequency,
+                "start": left,
+                "through": right,
+                "source": DATA_URL,
+                "feed": request["feed"],
+                "adjustment": request["adjustment"],
+            },
+        )
+        stats.append(
+            _validate_stats(
+                read_metadata(stat_path), chunk, frequency, left, right, dataset=str(stat_path)
+            )
+        )
+        frames.append(chunk)
+    frame = pd.concat(frames).sort_index()
     if frame.empty:
         raise DataError(
             f"No bars returned for {symbol} ({frequency}); refusing an empty final file"
@@ -361,8 +417,11 @@ def ingest_tier(client, root, frequency, symbols, start, through):
         "splits": split_boundaries(expected_index(frequency, start, through)),
         "complete": False,
     }
+    validate_tier_manifest(manifest, frequency, dataset=str(manifest_path))
     if manifest_path.exists():
-        previous = json.loads(manifest_path.read_text())
+        previous = validate_tier_manifest(
+            read_metadata(manifest_path), frequency, dataset=str(manifest_path)
+        )
         stable = (
             "frequency",
             "symbols",

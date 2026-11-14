@@ -16,6 +16,7 @@ from factory.contract import (
     validate_bars,
     validate_weights,
 )
+from factory.data_contract.sessions import protected_session_columns, validate_session_columns
 
 
 def main() -> int:
@@ -24,13 +25,25 @@ def main() -> int:
         bars = {symbol: pd.read_parquet(f"{symbol}.parquet") for symbol in request["symbols"]}
         definition = read_strategy("strategy.py", available_universe=list(bars))
         index = validate_bars(bars)
+        for symbol, frame in bars.items():
+            validate_session_columns(frame, definition.frequency, symbol)
         strategy = load_strategy(definition)
 
         def generate():
-            output = strategy.generate_signals(
-                {symbol: frame.copy(deep=True) for symbol, frame in bars.items()},
-                copy.deepcopy(request["params"]),
-            )
+            inputs = {symbol: frame.copy(deep=True) for symbol, frame in bars.items()}
+            output = strategy.generate_signals(inputs, copy.deepcopy(request["params"]))
+            for symbol, original in bars.items():
+                columns = list(protected_session_columns())
+                if "is_filled" in original:
+                    columns.append("is_filled")
+                try:
+                    pd.testing.assert_frame_equal(
+                        original[columns], inputs[symbol][columns], check_exact=True
+                    )
+                except (AssertionError, KeyError, TypeError) as error:
+                    raise ContractViolation(
+                        f"{symbol}: session/provenance fields are read-only"
+                    ) from error
             return validate_weights(output, index, definition.universe)
 
         first, second = generate(), generate()

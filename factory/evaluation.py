@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from factory.contract import read_strategy
+from factory.contract import activity_summary, read_strategy
 from factory.data import load_bars
 from factory.engine import backtest, daily_compound
 from factory.evals import config
@@ -83,8 +83,12 @@ def evaluate_file(path, data_root="data", *, timeout=60.0) -> RecordedEvaluation
                 split: {
                     "active_bars": int(result.executed.ne(0).any(axis=1).sum()),
                     "total_bars": len(result.executed),
+                    "days_traded": activity_summary(weights)["days_traded"],
+                    "target_active_bars": activity_summary(weights)["active_bars"],
                 }
-                for split, result in zip(("IS", "OOS"), results, strict=True)
+                for split, result, weights in zip(
+                    ("IS", "OOS"), results, (is_weights, oos_weights), strict=True
+                )
             },
         )
     except Exception:

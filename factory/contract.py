@@ -20,10 +20,38 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from factory.data import OHLCV, DataError, Frequency, validate_symbol
+from factory.data_contract.generated import SPEC
 
 
 class ContractViolation(ValueError):
     """A strategy bug, eligible for later bug-only self-heal."""
+
+
+class InactiveStrategy(ContractViolation):
+    """Full IS weights fail the activity contract; no performance metric is used."""
+
+    def __init__(self, activity):
+        super().__init__(SPEC["activity"]["message"])
+        self.status = SPEC["activity"]["status"]
+        self.activity = activity
+        self.usages = []
+
+
+def activity_summary(weights: pd.DataFrame) -> dict:
+    active = weights.ne(0).any(axis=1)
+    dates = weights.index.tz_convert(SPEC["calendar"]["timezone"]).normalize()
+    return {
+        "active_bars": int(active.sum()),
+        "total_bars": len(weights),
+        "days_traded": int(dates[active].nunique()),
+    }
+
+
+def validate_activity(weights: pd.DataFrame) -> dict:
+    activity = activity_summary(weights)
+    if activity["active_bars"] == 0 or activity["days_traded"] < SPEC["activity"]["minimum_days"]:
+        raise InactiveStrategy(activity)
+    return activity
 
 
 class ClaimedMetrics(BaseModel):

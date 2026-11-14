@@ -28,7 +28,7 @@ def test_run_records_all_stages_without_metric_healing(tmp_path, monkeypatch):
     monkeypatch.setattr(orchestrator, "load_bars", load)
 
     def proposals(spec, schema):
-        assert "after that session closes" in schema["SPY"]["bar_timing"]
+        assert "not guaranteed available at the regular-session close" in schema["data_contract"]
         return {"A": (LEAK, usage), "B": (CLEAN, usage), "C": (CLEAN, usage)}
 
     monkeypatch.setattr(orchestrator, "propose_parallel", proposals)

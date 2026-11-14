@@ -112,6 +112,10 @@ today's index membership, so results carry survivorship bias.
 Strategy data inputs and session-time semantics are defined in the generated
 [docs/DATA.md](docs/DATA.md). Do not maintain separate data-contract prompt text.
 
+Additional statuses: `INACTIVE` is a bug-class IS activity failure, eligible only
+for bounded self-heal; `VOID` invalidates an earlier run and excludes it from
+leaderboards and trial selection while preserving the original evidence.
+
 Every generated strategy is one Python file exposing:
 
 ```python

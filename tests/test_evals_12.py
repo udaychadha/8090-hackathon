@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from factory.contract import read_strategy
-from factory.data import load_bars
+from factory.data import expected_index, load_bars
 from factory.evals import config
 from factory.evals.friction import break_even_bps, friction_eval
 from factory.evals.lookahead import LookaheadBiasError, first_difference, lookahead_eval
@@ -20,7 +20,7 @@ needs_data = pytest.mark.skipif(
 
 def synthetic_bars(symbols, days=400, seed=7, vol=0.003):
     rng = np.random.default_rng(seed)
-    index = pd.date_range("2020-01-02T05:00:00Z", periods=days, freq="B", name="timestamp")
+    index = expected_index("1day", "2020-01-02", "2024-12-31")[:days]
     bars = {}
     for symbol in symbols:
         close = 100 * np.exp(np.cumsum(rng.normal(0, vol, days)))

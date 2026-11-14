@@ -5,7 +5,14 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from factory.contract import SAFE_METHODS, ContractViolation, parse_strategy
+from factory.contract import (
+    SAFE_METHODS,
+    ContractViolation,
+    InactiveStrategy,
+    parse_strategy,
+    validate_activity,
+)
+from factory.data_contract.prompts import worker_context
 from factory.evals.lookahead import LookaheadBiasError, lookahead_eval
 from factory.evals.runner import sandbox_runner
 from factory.llm import LLMError, complete
@@ -18,11 +25,11 @@ VARIANTS = {
     "C": "Regime-filtered: same signal plus exactly one volatility or trend filter.",
 }
 CONTRACT = """Return only Python source, without markdown fences. Define FREQUENCY, UNIVERSE,
-PARAMS and generate_signals(bars, params). bars is a dict of symbol -> DataFrame
-(open, high, low, close, volume, UTC DatetimeIndex). Return finite target weights
+PARAMS and generate_signals(bars, params). Use the supplied generated data contract
+and live input schema. Return finite target weights
 with exactly the union of input timestamps and UNIVERSE columns, weights [-1,1],
-row absolute sum <=1. Use only historical/current rows; the engine executes next
-bar. Never use shift(-1), future normalization, or backfilling. All tunable
+row absolute sum <=1. Use only historical/current rows.
+Never use shift(-1), future normalization, or backfilling. All tunable
 numeric constants belong in PARAMS (only literals 0 and 1 allowed elsewhere).
 Only import numpy, pandas, math. No file/network I/O, randomness, private names,
 getattr, dynamic execution, classes or decorators. Module-level assignments are
@@ -47,7 +54,7 @@ def propose(spec, variant, schema):
             {
                 "spec": spec.model_dump(),
                 "variant": VARIANTS[variant],
-                "is_schema": schema,
+                "data_context": schema,
                 "allowed_methods": sorted(SAFE_METHODS),
             }
         ),
@@ -74,6 +81,7 @@ def validate_and_heal(spec, variant, code, is_bars, path, records, run_id):
     path.parent.mkdir(parents=True, exist_ok=True)
     usages = []
     pending = None
+    data_context = worker_context(is_bars, spec.frequency)
     for attempt in range(4):
         code = redact(code)
         path.write_text(code)
@@ -83,7 +91,8 @@ def validate_and_heal(spec, variant, code, is_bars, path, records, run_id):
                 spec.universe
             ):
                 raise ContractViolation("FREQUENCY and UNIVERSE must match StrategySpec")
-            lookahead_eval(sandbox_runner(path), is_bars)
+            _, weights = lookahead_eval(sandbox_runner(path), is_bars)
+            validate_activity(weights)
         except (ContractViolation, StrategyExecutionError, LookaheadBiasError) as error:
             detail = str(error)
             if isinstance(error, StrategyExecutionError):
@@ -109,9 +118,20 @@ def validate_and_heal(spec, variant, code, is_bars, path, records, run_id):
                 "failed",
                 "IS bug validation failed",
                 variant=variant,
-                data={"eval": 1, "error": detail},
+                data={
+                    "eval": 1,
+                    "error": detail,
+                    **(
+                        {"status": error.status, **error.activity}
+                        if isinstance(error, InactiveStrategy)
+                        else {}
+                    ),
+                },
             )
             if attempt == 3:
+                if isinstance(error, InactiveStrategy):
+                    error.usages = usages
+                    raise error
                 return None, usages
             pending = {"variant": variant, "attempt": attempt + 1, "error": detail, "fixed": False}
             records.put("heal_attempts", f"{run_id}_{variant}_{attempt + 1}", run_id, pending)
@@ -133,6 +153,7 @@ def validate_and_heal(spec, variant, code, is_bars, path, records, run_id):
                             "code": code,
                             "error": detail,
                             "allowed_methods": sorted(SAFE_METHODS),
+                            "data_context": data_context,
                         }
                     ),
                 )

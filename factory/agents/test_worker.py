@@ -10,6 +10,7 @@ from factory.agents import worker
 from factory.agents.records import Records
 from factory.agents.test_extractor import response
 from factory.contract import StrategySpec
+from factory.data import expected_index
 from factory.llm import Completion
 
 CLEAN = """import pandas as pd
@@ -35,7 +36,7 @@ def spec():
 
 
 def bars():
-    index = pd.date_range("2020-01-01", periods=40, freq="B", tz="UTC", name="timestamp")
+    index = expected_index("1day", "2020-01-02", "2020-04-30")[:40]
     close = pd.Series(range(100, 140), index=index, dtype=float)
     return {"SPY": pd.DataFrame({k: close for k in ["open", "high", "low", "close", "volume"]})}
 
