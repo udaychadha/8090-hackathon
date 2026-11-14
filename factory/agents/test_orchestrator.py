@@ -40,7 +40,9 @@ def test_run_records_all_stages_without_metric_healing(tmp_path, monkeypatch):
 
     monkeypatch.setattr(worker, "complete", repair)
 
-    def evaluate(*a):
+    def evaluate(*a, on_eval2_started=None):
+        if on_eval2_started:
+            on_eval2_started()
         returns = pd.Series([0.01, -0.02, 0.005] * 30)
         return RecordedEvaluation(
             EvalReport(

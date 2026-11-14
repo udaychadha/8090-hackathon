@@ -373,23 +373,32 @@ class Records:
             if include_voided or v.get("leaderboard_eligible", True)
         ]
 
-    def trial_variants(self, run_id, *, include_voided=False):
-        parent = self.get("runs", run_id, include_voided=True)
-        if parent is None:
+    def trial_variants(self, run_id=None, *, include_voided=False):
+        """Global reached trials; eligibility flags cannot erase an attempt."""
+        parents = {r["run_id"]: r for r in self.list("runs", include_voided=True)}
+        if run_id is not None and run_id not in parents:
             raise KeyError(run_id)
-        if not include_voided and (parent["voided"] or not parent.get("eval_eligible", True)):
-            return []
         reached = {
-            v["variant"]
+            (v["run_id"], v["variant"])
             for v in self.list("eval_results", run_id=run_id, include_voided=include_voided)
             if v["number"] == 2
         }
-        return [
-            v
-            for v in self.list("variants", run_id=run_id, include_voided=include_voided)
-            if (include_voided or v.get("eval_eligible", True))
-            and (v["variant"] in reached or any(e["number"] == 2 for e in v.get("evals", [])))
-        ]
+        trials = []
+        for variant in self.list("variants", run_id=run_id, include_voided=include_voided):
+            parent = parents.get(variant["run_id"], {})
+            if parent.get("is_control") or variant.get("is_control"):
+                continue
+            if not include_voided and any(
+                item.get("voided") or item.get("status") == "VOID" for item in (parent, variant)
+            ):
+                continue
+            if (
+                variant.get("reached_eval_2")
+                or (variant["run_id"], variant["variant"]) in reached
+                or any(e["number"] == 2 for e in variant.get("evals", []))
+            ):
+                trials.append(variant)
+        return sorted(trials, key=lambda v: v["variant_id"])
 
     def close(self):
         self.db.close()

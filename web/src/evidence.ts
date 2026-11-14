@@ -76,14 +76,18 @@ export function evalMetricSummary(result: EvalResult): string[] {
     lines.push(
       `OOS Sharpe ${value(m.oos_sharpe)} · must exceed 0 and be ≥ ${value(m.min_ratio)} × IS ${value(m.is_sharpe)}`,
     );
+    lines.push(`IS Sharpe ${value(m.is_sharpe)} · must exceed 0`);
+    const share = (v: Json | undefined) =>
+      v == null ? "not applicable / unavailable" : value(v);
     lines.push(
-      `${value(m.window_days)}-day PnL share: IS ${value(m.is_max_window_share)} / OOS ${value(m.oos_max_window_share)} · maximum ${value(m.max_share)}`,
+      `${value(m.window_days)}-day PnL share: IS ${share(m.is_max_window_share)} / OOS ${share(m.oos_max_window_share)} · maximum ${value(m.max_share)}`,
     );
   }
   if (result.n === 5)
     lines.push(
-      `DSR ${value(m.dsr)} · minimum ${value(m.min)} · ${value(m.n_trials)} trials`,
+      `DSR ${value(m.dsr)} · minimum ${value(m.min)} · ${value(m.n_trials)} trials${m.trial_scope === "all_runs" ? " across all runs" : ""}`,
     );
+  if (m.reason) lines.push(String(m.reason));
   if (m.error) lines.push(String(m.error));
   return lines;
 }

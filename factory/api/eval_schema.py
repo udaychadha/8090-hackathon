@@ -194,6 +194,14 @@ def schema():
             ],
             "checks": [
                 _knob(
+                    "IS_SHARPE_POSITIVE",
+                    "Positive IS Sharpe",
+                    "In-sample Sharpe must be strictly above zero.",
+                    metric="is_sharpe",
+                    op=">",
+                    fixed=0,
+                ),
+                _knob(
                     "DECAY_MIN_RATIO",
                     "OOS Sharpe relative to IS",
                     "OOS Sharpe must be at least this factor times IS Sharpe.",
@@ -220,8 +228,9 @@ def schema():
                 ],
             ],
             "notes": [
-                "Both Sharpes must be defined; OOS Sharpe is compared with factor × IS Sharpe.",
+                "Both Sharpes must be positive; OOS Sharpe is compared with factor × IS Sharpe.",
                 "Undefined or nonpositive total PnL cannot pass the concentration check.",
+                "PnL is the sum of daily net returns; a positive-total share can exceed one.",
             ],
         },
         {
@@ -234,7 +243,7 @@ def schema():
                 _knob(
                     "DSR_MIN_TRIALS",
                     "Minimum trial count",
-                    "Floor on the number of sibling trials used in the adjustment.",
+                    "Unchanged floor on the selected global trial count used in the adjustment.",
                 ),
             ],
             "checks": [
@@ -246,8 +255,10 @@ def schema():
                 )
             ],
             "notes": [
-                "Counts eligible siblings that reached Eval 2; voided runs do not count.",
-                "Missing sibling evidence or undefined trial variance fails closed.",
+                "Counts variants that reached Eval 2 across all runs; "
+                "voids and controls do not count.",
+                "Sample variance uses the same cohort's daily OOS Sharpes; repeat runs count.",
+                "Missing or conflicting trial Sharpes remain in N and fail the adjustment closed.",
                 "Related variants are correlated; this is not proof of independent trials.",
             ],
         },

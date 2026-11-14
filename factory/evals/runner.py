@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -59,10 +59,17 @@ class EvalReport:
         }
 
 
-def with_deflated(report: EvalReport, trial_sharpes: Sequence[float]) -> EvalReport:
-    """(Re)score Eval 5 once every sibling variant's OOS Sharpe is known."""
+def with_deflated(
+    report: EvalReport,
+    trial_sharpes: Sequence[float | None],
+    *,
+    trial_variant_ids: Sequence[str] | None = None,
+) -> EvalReport:
+    """(Re)score Eval 5 against the complete retained trial cohort."""
     started = time.perf_counter()
-    result = deflated_eval(report.oos_daily_returns, trial_sharpes)
+    result = deflated_eval(
+        report.oos_daily_returns, trial_sharpes, trial_variant_ids=trial_variant_ids
+    )
     seconds = {**report.seconds, "eval_5": time.perf_counter() - started}
     seconds["total"] = sum(value for key, value in seconds.items() if key != "total")
     return replace(report, results={**report.results, 5: result}, seconds=seconds)
@@ -75,7 +82,8 @@ def evaluate(
     is_bars: dict[str, pd.DataFrame],
     oos_bars: dict[str, pd.DataFrame],
     *,
-    trial_sharpes: Sequence[float] | None = None,
+    trial_sharpes: Sequence[float | None] | None = None,
+    on_eval2_started: Callable[[], None] | None = None,
 ) -> EvalReport:
     """Run Evals 1–5. Later evals still run after a failure, for the tearsheet.
 
@@ -92,6 +100,8 @@ def evaluate(
 
     results[1], is_weights = lookahead_eval(run, is_bars)
     lap("eval_1")
+    if on_eval2_started is not None:
+        on_eval2_started()
     results[2] = friction_eval(is_bars, is_weights, frequency)
     lap("eval_2")
     is_base = backtest(
@@ -119,7 +129,8 @@ def evaluate_file(
     path: str | Path,
     data_root: str | Path = "data",
     *,
-    trial_sharpes: Sequence[float] | None = None,
+    trial_sharpes: Sequence[float | None] | None = None,
+    on_eval2_started: Callable[[], None] | None = None,
     timeout: float = 60.0,
 ) -> EvalReport:
     """Load the strategy's tier (IS and OOS only; HOLDOUT stays sealed) and evaluate."""
@@ -134,6 +145,7 @@ def evaluate_file(
         is_bars,
         oos_bars,
         trial_sharpes=trial_sharpes,
+        on_eval2_started=on_eval2_started,
     )
 
 
@@ -145,7 +157,7 @@ def main() -> None:
         "--trial-sharpes",
         type=float,
         nargs="*",
-        help="per-day OOS Sharpes of the sibling variants that reached Eval 2",
+        help="per-day OOS Sharpes of all other variants that reached Eval 2",
     )
     args = parser.parse_args()
     started = time.perf_counter()

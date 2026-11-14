@@ -346,6 +346,14 @@ class EvalMetrics(Evidence):
     is_max_window_share: Number | None = Field(
         default=None, description="Largest IS window share of PnL."
     )
+    is_total_pnl: Number | None = Field(
+        default=None,
+        description="Sum of IS daily net returns used by concentration; not compounded.",
+    )
+    oos_total_pnl: Number | None = Field(
+        default=None,
+        description="Sum of OOS daily net returns used by concentration; not compounded.",
+    )
     oos_max_window_share: Number | None = Field(
         default=None, description="Largest OOS window share of PnL."
     )
@@ -362,7 +370,21 @@ class EvalMetrics(Evidence):
     oos_days: Count | None = Field(default=None, description="Number of OOS return observations.")
     n_trials: Count | None = Field(default=None, description="Trial count used by deflated Sharpe.")
     trial_sharpes_supplied: Count | None = Field(
-        default=None, description="Number of available sibling Sharpes."
+        default=None, description="Number of finite Sharpes available from the selected population."
+    )
+    trial_count: Count | None = Field(
+        default=None, description="Selected trial count before the unchanged configured N floor."
+    )
+    trial_variant_ids: list[Identifier] | None = Field(
+        default=None, description="Exact distinct variant identities used by this global judgment."
+    )
+    trial_scope: Literal["all_runs", "supplied"] | None = Field(
+        default=None,
+        description="Whether the population is all retained eligible runs or supplied.",
+    )
+    judgment_revision: StrictStr | None = Field(
+        default=None,
+        description="Owner-sanctioned deterministic rule revision used for this judgment.",
     )
     min: Number | None = Field(
         default=None, description="Recorded minimum deflated Sharpe threshold."
@@ -372,7 +394,7 @@ class EvalMetrics(Evidence):
     )
     observations: Count | None = Field(default=None, description="Return observations used by DSR.")
     trial_variance: Number | None = Field(
-        default=None, description="Variance among sibling daily Sharpes."
+        default=None, description="Sample variance of the selected population's daily OOS Sharpes."
     )
     sr0: Number | None = Field(default=None, description="Expected maximum null Sharpe benchmark.")
     skew: Number | None = Field(default=None, description="Population skewness of returns.")
@@ -509,6 +531,10 @@ class OriginalResult(Evidence):
 
 
 class Voidable(Record):
+    is_control: StrictBool = Field(
+        default=False,
+        description="Explicit control experiment, excluded from research trial counts.",
+    )
     original_result: OriginalResult | None = Field(
         default=None, description="Unchanged original verdict evidence when voided."
     )
@@ -536,6 +562,12 @@ class Voidable(Record):
 
 
 class Variant(Voidable):
+    reached_eval_2: StrictBool = Field(
+        default=False, description="Durable evidence that this candidate entered Eval 2."
+    )
+    judgment_revision: StrictStr | None = Field(
+        default=None, description="Most recent owner-sanctioned recorded-metric judgment revision."
+    )
     variant_id: Identifier = Field(description="Stable candidate identity; matches id.")
     source_id: Identifier = Field(description="Source of this candidate experiment.")
     source_title: Identifier = Field(description="Source title at experiment time.")

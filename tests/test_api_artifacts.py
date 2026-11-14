@@ -5,6 +5,26 @@ import json
 import pytest
 
 
+def test_rejudgment_evidence_is_available_only_in_audit_mode(artifact_root):
+    from factory.api.artifacts import ArtifactRegistry
+
+    (artifact_root / "report/eval45-rejudgment.md").write_text("r_void_A: VOID → VOID")
+    backup = artifact_root / "runs/rejudge-backup-2026-11-14T120000Z"
+    backup.mkdir()
+    (backup / "plan.json").write_text('{"trial_count":13}')
+    (backup / "factory.db").write_bytes(b"snapshot")
+    (backup / "secret.txt").write_text("not allowlisted")
+    registry = ArtifactRegistry(artifact_root)
+    assert not any("rejudge" in item.name for item in registry.list())
+    entries = {item.name: item for item in registry.list(include_voided=True)}
+    report = entries["report/eval45-rejudgment.md"]
+    assert report.audit_only and report.historical
+    assert "r_void_A" in registry.view(report.id, include_voided=True).content
+    assert entries[f"runs/{backup.name}/plan.json"].audit_only
+    assert not entries[f"runs/{backup.name}/factory.db"].downloadable
+    assert f"runs/{backup.name}/secret.txt" not in entries
+
+
 @pytest.fixture
 def artifact_root(tmp_path):
     from factory.agents.records import Records

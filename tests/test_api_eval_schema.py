@@ -50,3 +50,13 @@ def test_decay_describes_multiplication_instead_of_a_sign_sensitive_ratio():
     assert check["op"] == ">="
     # A negative IS Sharpe does not reverse the harness's comparison.
     assert 0.2 >= check["default"] * -0.5
+
+
+def test_owner_revision_exposes_positive_is_and_global_trial_rules():
+    schema = client().get("/api/evals/schema").json()
+    decay = schema["evals"][3]
+    positive_is = next(c for c in decay["checks"] if c["key"] == "IS_SHARPE_POSITIVE")
+    assert positive_is["metric"] == "is_sharpe" and positive_is["op"] == ">"
+    assert positive_is["default"] == 0 and positive_is["locked"]
+    notes = " ".join(schema["evals"][4]["notes"])
+    assert "all runs" in notes and "control" in notes

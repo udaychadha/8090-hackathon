@@ -84,6 +84,13 @@ def metric_details(evaluation):
                 details.append(
                     f"{label}: {m[key]:.3f}." if m[key] is not None else f"{label} is undefined."
                 )
+        for period in ("is", "oos"):
+            share = m.get(f"{period}_max_window_share")
+            details.append(
+                f"{period.upper()} concentration share: {share:.3f}."
+                if share is not None
+                else f"{period.upper()} concentration share: not applicable or unavailable (fails)."
+            )
     elif number == 5:
         if m.get("dsr") is not None:
             details.append(f"Deflated Sharpe probability: {m['dsr']:.3f}.")

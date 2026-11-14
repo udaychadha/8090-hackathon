@@ -27,7 +27,9 @@ class RecordedEvaluation:
     activity: dict | None = None
 
 
-def evaluate_file(path, data_root="data", *, timeout=60.0) -> RecordedEvaluation:
+def evaluate_file(
+    path, data_root="data", *, timeout=60.0, on_eval2_started=None
+) -> RecordedEvaluation:
     definition = read_strategy(path)
     symbols = list(definition.universe)
     is_bars = load_bars(data_root, definition.frequency, symbols, split="IS")
@@ -47,7 +49,14 @@ def evaluate_file(path, data_root="data", *, timeout=60.0) -> RecordedEvaluation
                 captured["joined"] = weights.copy()
         return weights
 
-    report = evaluate(record_run, definition.params, definition.frequency, is_bars, oos_bars)
+    report = evaluate(
+        record_run,
+        definition.params,
+        definition.frequency,
+        is_bars,
+        oos_bars,
+        on_eval2_started=on_eval2_started,
+    )
     try:
         is_weights = captured["IS"]
         oos_weights = captured["joined"].loc[lambda w: w.index > is_weights.index[-1]]

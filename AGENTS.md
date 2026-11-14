@@ -205,8 +205,35 @@ Thresholds are in `factory/evals/config.py`.
 | 1 | Lookahead | IS | At 5 cut points, weights from the truncated run equal the full run's weights up to the cut (max abs diff <= 1e-9). |
 | 2 | Friction | IS | Net Sharpe at 5 bps round trip >= 0.5. Reports break-even bps. |
 | 3 | Sensitivity | IS, 5 bps | Worst Sharpe under ±10% / ±20% parameter jitter >= 50% of base. |
-| 4 | Decay | IS vs OOS, 5 bps | OOS Sharpe > 0 and >= 50% of IS; no 5-day window holds > 60% of PnL. |
-| 5 | Deflated Sharpe | OOS, 5 bps | Bailey & López de Prado DSR >= 0.95, N = variants that reached Eval 2. |
+| 4 | Decay | IS vs OOS, 5 bps | IS Sharpe > 0, OOS Sharpe > 0 and >= 50% of IS; both periods have positive total PnL and no 5-day window holds > 60% of PnL. |
+| 5 | Deflated Sharpe | OOS, 5 bps | Bailey & López de Prado DSR >= 0.95; N and trial variance use every non-void, non-control variant that reached Eval 2 across all runs, with the unchanged configured minimum N. |
+
+**Owner-sanctioned correction, Nov 14:** revision
+`2026-11-14-eval45-global-v2` authorizes the Eval 4 positivity guards and Eval 5
+global trial accounting. No value in `factory/evals/config.py` may change.
+Concentration PnL is the existing sum of daily net returns. When a period's
+total is zero, negative or unknown, its concentration share is not applicable
+(null) and the check fails. A positive-total share can legitimately exceed one
+when other windows lose money; retain it and fail against the unchanged cap.
+
+Each trial is a distinct stored variant identity, including repeat runs and
+failed variants that reached Eval 2. Exclude explicit `is_control` variants or
+runs and voided evidence; pre-Eval-2 bugs and inactivity are not trials.
+Persist `reached_eval_2` before entering Eval 2, so later execution failures
+cannot disappear from N. Missing/conflicting Sharpes count toward N and fail
+Eval 5 closed; do not estimate variance from a smaller complete-case subset.
+Variance uses the same population's per-day OOS base-cost Sharpes (sample
+variance, ddof=1). Store the exact cohort IDs and raw count; the configured
+minimum trial-count floor is unchanged. A judgment records the global cohort
+available at that time.
+
+`python -m factory.rejudge --apply` re-judges retained Eval 4/5 sufficient
+statistics without strategy execution, backtests or model calls. It backs up
+the database/mirror, rejects conflicting snapshots or concurrent runs, updates
+typed eval/variant/run projections atomically and appends revision events.
+Void status and its original-result evidence stay preserved; missing evals are
+not invented. The report includes every stored variant's before/after verdict.
+Stop the local API before applying so its submission lock protects the revision.
 
 Status values: `VERIFIED` (all five), `FAILED_EVAL_n` (first failing eval;
 later evals are still run and recorded), `BUG_UNRESOLVED` (self-heal
@@ -491,13 +518,16 @@ numeric-array values from config.py), and `notes`. Each eval additionally has
 implementation; these explain fixed mathematical guards as well as thresholds.
 For checks, null `relative_to` means `metric op default`; a named relative metric
 means `metric op (default * relative_to)`. Eval 4 compares OOS Sharpe against a
-multiple of IS Sharpe, rather than comparing the reported ratio when IS is negative.
+multiple of IS Sharpe and independently requires both Sharpes to be positive.
+An OOS/IS ratio with nonpositive IS is not applicable. Eval 5's displayed rules
+state the global, non-void, non-control cohort and the unchanged trial-count floor.
 Only the default profile is readable. English intake, saved-spec start,
 event upload, provider-key writes, source approval and custom profiles are not
 implemented in this work: their controls stay disabled with "not available yet"
 and their write endpoints return 501 with that detail. Provider presence may be
 reported from configured environment-variable presence only, without a key or
-an invented connectivity test. No settings or eval logic change.
+an invented connectivity test. The interface does not change settings or eval logic;
+the owner-sanctioned correction above is a separately audited backend revision.
 
 ## Interface
 
@@ -613,8 +643,9 @@ Threshold changes re-judge stored metrics without re-running backtests. A
 change to a setting marks the profile `stale` until affected variants are
 re-run. Every result records the profile that judged it, and the API returns
 the default verdict alongside. Add the three `/api/evals` endpoints and the
-Rules screen. This is the one sanctioned change to `factory/evals/`; default
-values still may not be altered.
+Rules screen. This is a sanctioned change to `factory/evals/`, in addition to
+the Nov 14 owner-authorized Eval 4/5 correction above; default values still may
+not be altered.
 Accept: a PUT outside bounds or on a locked knob is rejected; lowering minimum
 net Sharpe to 0.45 flips the clean fixture's Eval 2 verdict under the custom
 profile while its default verdict stays FAIL; the Rules screen shows all five

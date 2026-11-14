@@ -1,0 +1,1993 @@
+{
+  "revision": "2026-11-14-eval45-global-v2",
+  "input_fingerprint": "10341f9ba2e87f72f4feb4aa4c4f3ebe9b4e04cb6a198e98672d98e2ddf64039",
+  "trial_variant_ids": [
+    "r_17ac8caf8a59_A",
+    "r_17ac8caf8a59_B",
+    "r_17ac8caf8a59_C",
+    "r_55eebea2c07d_A",
+    "r_55eebea2c07d_B",
+    "r_55eebea2c07d_C",
+    "r_d1b6cda53684_A",
+    "r_d1b6cda53684_C",
+    "r_e7094212a558_B",
+    "r_e7094212a558_C",
+    "r_ffbba23dbcff_A",
+    "r_ffbba23dbcff_B",
+    "r_ffbba23dbcff_C"
+  ],
+  "trial_sharpes": [
+    -0.39399219510449757,
+    -0.43643993933985736,
+    -0.17431554566200497,
+    -0.39399219510449757,
+    -0.4325720320187533,
+    -0.17431554566200497,
+    0.015699060539441555,
+    0.0023584519411094795,
+    -0.193651573665181,
+    -0.19230294964311373,
+    -0.028426203392346413,
+    -0.022973209233542,
+    -0.03226369757564285
+  ],
+  "trial_count": 13,
+  "rows": [
+    {
+      "variant_id": "r_17ac8caf8a59_A",
+      "run_id": "r_17ac8caf8a59",
+      "source_title": "Market intraday momentum",
+      "variant": "A",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -3.0387452986775245,
+            "oos_sharpe": -6.254432200481642,
+            "oos_to_is_ratio": 2.0582285074052105,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.39399219510449757,
+            "observations": 152,
+            "trial_variance": 0.01979480651032201,
+            "sr0": 0.11998449055406529,
+            "skew": -0.15402633325540668,
+            "kurtosis": 3.4535469013637417,
+            "dsr": 2.656812547741083e-10
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -3.0387452986775245,
+            "oos_sharpe": -6.254432200481642,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.39399219510449757,
+            "observations": 152,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.15402633325540668,
+            "kurtosis": 3.4535469013637417,
+            "dsr": 0.0,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_17ac8caf8a59_B",
+      "run_id": "r_17ac8caf8a59",
+      "source_title": "Market intraday momentum",
+      "variant": "B",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -3.5053019818906432,
+            "oos_sharpe": -6.928269250256268,
+            "oos_to_is_ratio": 1.9765113779211088,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.43643993933985736,
+            "observations": 152,
+            "trial_variance": 0.01979480651032201,
+            "sr0": 0.11998449055406529,
+            "skew": -0.053361954079805915,
+            "kurtosis": 3.049637266478465,
+            "dsr": 2.1015689188885744e-11
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -3.5053019818906432,
+            "oos_sharpe": -6.928269250256268,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.43643993933985736,
+            "observations": 152,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.053361954079805915,
+            "kurtosis": 3.049637266478465,
+            "dsr": 0.0,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_17ac8caf8a59_C",
+      "run_id": "r_17ac8caf8a59",
+      "source_title": "Market intraday momentum",
+      "variant": "C",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -1.444171105027142,
+            "oos_sharpe": -2.767173500845135,
+            "oos_to_is_ratio": 1.916098093371788,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.17431554566200497,
+            "observations": 152,
+            "trial_variance": 0.01979480651032201,
+            "sr0": 0.11998449055406529,
+            "skew": -0.4589990295718879,
+            "kurtosis": 6.048049130289781,
+            "dsr": 0.00011029258258321573
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -1.444171105027142,
+            "oos_sharpe": -2.767173500845135,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.17431554566200497,
+            "observations": 152,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.4589990295718879,
+            "kurtosis": 6.048049130289781,
+            "dsr": 1.8276001823025467e-09,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_449ef7fd3ae6_A",
+      "run_id": "r_449ef7fd3ae6",
+      "source_title": "Market intraday momentum \u2014 first-half-hour sign timing",
+      "variant": "A",
+      "voided": true,
+      "is_control": false,
+      "before": {
+        "status": "VOID",
+        "evals_passed": 0
+      },
+      "after": {
+        "status": "VOID",
+        "evals_passed": 0
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": null,
+            "oos_sharpe": null,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "reason": "Incomplete sibling trial accounting or undefined trial Sharpe"
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": null,
+            "oos_sharpe": null,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_count": 13,
+            "trial_sharpes_supplied": 13,
+            "trial_scope": "all_runs",
+            "min": 0.95,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "dsr": null,
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "reason": "Sharpe undefined",
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_449ef7fd3ae6_B",
+      "run_id": "r_449ef7fd3ae6",
+      "source_title": "Market intraday momentum \u2014 first-half-hour sign timing",
+      "variant": "B",
+      "voided": true,
+      "is_control": false,
+      "before": {
+        "status": "VOID",
+        "evals_passed": 0
+      },
+      "after": {
+        "status": "VOID",
+        "evals_passed": 0
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": null,
+            "oos_sharpe": null,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "reason": "Incomplete sibling trial accounting or undefined trial Sharpe"
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": null,
+            "oos_sharpe": null,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_count": 13,
+            "trial_sharpes_supplied": 13,
+            "trial_scope": "all_runs",
+            "min": 0.95,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "dsr": null,
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "reason": "Sharpe undefined",
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_449ef7fd3ae6_C",
+      "run_id": "r_449ef7fd3ae6",
+      "source_title": "Market intraday momentum \u2014 first-half-hour sign timing",
+      "variant": "C",
+      "voided": true,
+      "is_control": false,
+      "before": {
+        "status": "VOID",
+        "evals_passed": 0
+      },
+      "after": {
+        "status": "VOID",
+        "evals_passed": 0
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": null,
+            "oos_sharpe": null,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "reason": "Incomplete sibling trial accounting or undefined trial Sharpe"
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": null,
+            "oos_sharpe": null,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_count": 13,
+            "trial_sharpes_supplied": 13,
+            "trial_scope": "all_runs",
+            "min": 0.95,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "dsr": null,
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "reason": "Sharpe undefined",
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_55eebea2c07d_A",
+      "run_id": "r_55eebea2c07d",
+      "source_title": "Market intraday momentum \u2014 first-half-hour sign timing",
+      "variant": "A",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -3.0387452986775245,
+            "oos_sharpe": -6.254432200481642,
+            "oos_to_is_ratio": 2.0582285074052105,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.39399219510449757,
+            "observations": 152,
+            "trial_variance": 0.01940710781199062,
+            "sr0": 0.1188036792590398,
+            "skew": -0.15402633325540668,
+            "kurtosis": 3.4535469013637417,
+            "dsr": 2.9089819442162934e-10
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -3.0387452986775245,
+            "oos_sharpe": -6.254432200481642,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.39399219510449757,
+            "observations": 152,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.15402633325540668,
+            "kurtosis": 3.4535469013637417,
+            "dsr": 0.0,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_55eebea2c07d_B",
+      "run_id": "r_55eebea2c07d",
+      "source_title": "Market intraday momentum \u2014 first-half-hour sign timing",
+      "variant": "B",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -3.7122417579215377,
+            "oos_sharpe": -6.866868125060944,
+            "oos_to_is_ratio": 1.8497901195168018,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.4325720320187533,
+            "observations": 152,
+            "trial_variance": 0.01940710781199062,
+            "sr0": 0.1188036792590398,
+            "skew": -0.08351013040400551,
+            "kurtosis": 3.164351343264253,
+            "dsr": 2.6012747511572343e-11
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -3.7122417579215377,
+            "oos_sharpe": -6.866868125060944,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.4325720320187533,
+            "observations": 152,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.08351013040400551,
+            "kurtosis": 3.164351343264253,
+            "dsr": 0.0,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_55eebea2c07d_C",
+      "run_id": "r_55eebea2c07d",
+      "source_title": "Market intraday momentum \u2014 first-half-hour sign timing",
+      "variant": "C",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -1.444171105027142,
+            "oos_sharpe": -2.767173500845135,
+            "oos_to_is_ratio": 1.916098093371788,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.17431554566200497,
+            "observations": 152,
+            "trial_variance": 0.01940710781199062,
+            "sr0": 0.1188036792590398,
+            "skew": -0.4589990295718879,
+            "kurtosis": 6.048049130289781,
+            "dsr": 0.00011690445361656199
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -1.444171105027142,
+            "oos_sharpe": -2.767173500845135,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.17431554566200497,
+            "observations": 152,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.4589990295718879,
+            "kurtosis": 6.048049130289781,
+            "dsr": 1.8276001823025467e-09,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_b8116b8c72ef_A",
+      "run_id": "r_b8116b8c72ef",
+      "source_title": "High Frequency and Dynamic Pairs Trading Based on Statistical Arbitrage Using a Two-Stage Correlation and Cointegration Approach",
+      "variant": "A",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "INACTIVE",
+        "evals_passed": 0
+      },
+      "after": {
+        "status": "INACTIVE",
+        "evals_passed": 0
+      },
+      "evals_before": [],
+      "evals_after": [],
+      "changed_evals": [],
+      "action": "no recorded evals to change"
+    },
+    {
+      "variant_id": "r_b8116b8c72ef_B",
+      "run_id": "r_b8116b8c72ef",
+      "source_title": "High Frequency and Dynamic Pairs Trading Based on Statistical Arbitrage Using a Two-Stage Correlation and Cointegration Approach",
+      "variant": "B",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "INACTIVE",
+        "evals_passed": 0
+      },
+      "after": {
+        "status": "INACTIVE",
+        "evals_passed": 0
+      },
+      "evals_before": [],
+      "evals_after": [],
+      "changed_evals": [],
+      "action": "no recorded evals to change"
+    },
+    {
+      "variant_id": "r_b8116b8c72ef_C",
+      "run_id": "r_b8116b8c72ef",
+      "source_title": "High Frequency and Dynamic Pairs Trading Based on Statistical Arbitrage Using a Two-Stage Correlation and Cointegration Approach",
+      "variant": "C",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "INACTIVE",
+        "evals_passed": 0
+      },
+      "after": {
+        "status": "INACTIVE",
+        "evals_passed": 0
+      },
+      "evals_before": [],
+      "evals_after": [],
+      "changed_evals": [],
+      "action": "no recorded evals to change"
+    },
+    {
+      "variant_id": "r_d1b6cda53684_A",
+      "run_id": "r_d1b6cda53684",
+      "source_title": "Statistical Arbitrage in the U.S. Equities Market \u2014 15-PCA Mean-Reversion Strategy",
+      "variant": "A",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -0.2139226982455158,
+            "oos_sharpe": 0.24921486002825924,
+            "oos_to_is_ratio": -1.1649762370809251,
+            "sharpe_ok": true,
+            "is_max_window_share": null,
+            "oos_max_window_share": 0.816237605017275,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 2,
+            "min": 0.95,
+            "daily_sharpe": 0.015699060539441555,
+            "observations": 546,
+            "trial_variance": 8.898591888694585e-05,
+            "sr0": 0.008044705054980072,
+            "skew": 0.16797496200235895,
+            "kurtosis": 3.7124952962792364,
+            "dsr": 0.570997312837819
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -0.2139226982455158,
+            "oos_sharpe": 0.24921486002825924,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": 0.816237605017275,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": 0.015699060539441555,
+            "observations": 546,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": 0.16797496200235895,
+            "kurtosis": 3.7124952962792364,
+            "dsr": 3.0080604673798916e-11,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_d1b6cda53684_B",
+      "run_id": "r_d1b6cda53684",
+      "source_title": "Statistical Arbitrage in the U.S. Equities Market \u2014 15-PCA Mean-Reversion Strategy",
+      "variant": "B",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "BUG_UNRESOLVED",
+        "evals_passed": 0
+      },
+      "after": {
+        "status": "BUG_UNRESOLVED",
+        "evals_passed": 0
+      },
+      "evals_before": [],
+      "evals_after": [],
+      "changed_evals": [],
+      "action": "no recorded evals to change"
+    },
+    {
+      "variant_id": "r_d1b6cda53684_C",
+      "run_id": "r_d1b6cda53684",
+      "source_title": "Statistical Arbitrage in the U.S. Equities Market \u2014 15-PCA Mean-Reversion Strategy",
+      "variant": "C",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -0.6972448453517306,
+            "oos_sharpe": 0.03743926389163941,
+            "oos_to_is_ratio": -0.053696006705869416,
+            "sharpe_ok": true,
+            "is_max_window_share": null,
+            "oos_max_window_share": 4.744168460532077,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 2,
+            "min": 0.95,
+            "daily_sharpe": 0.0023584519411094795,
+            "observations": 546,
+            "trial_variance": 8.898591888694585e-05,
+            "sr0": 0.008044705054980072,
+            "skew": 0.09855557791606726,
+            "kurtosis": 3.7470467743624645,
+            "dsr": 0.4471907674095582
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -0.6972448453517306,
+            "oos_sharpe": 0.03743926389163941,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": 4.744168460532077,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": 0.0023584519411094795,
+            "observations": 546,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": 0.09855557791606726,
+            "kurtosis": 3.7470467743624645,
+            "dsr": 3.75832698296108e-12,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_e7094212a558_A",
+      "run_id": "r_e7094212a558",
+      "source_title": "Beat the Market: An Effective Intraday Momentum Strategy for S&P500 ETF (SPY)",
+      "variant": "A",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "INACTIVE",
+        "evals_passed": 0
+      },
+      "after": {
+        "status": "INACTIVE",
+        "evals_passed": 0
+      },
+      "evals_before": [],
+      "evals_after": [],
+      "changed_evals": [],
+      "action": "no recorded evals to change"
+    },
+    {
+      "variant_id": "r_e7094212a558_B",
+      "run_id": "r_e7094212a558",
+      "source_title": "Beat the Market: An Effective Intraday Momentum Strategy for S&P500 ETF (SPY)",
+      "variant": "B",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -1.409757811266377,
+            "oos_sharpe": -3.0741234294862427,
+            "oos_to_is_ratio": 2.180603934178436,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 2,
+            "min": 0.95,
+            "daily_sharpe": -0.193651573665181,
+            "observations": 152,
+            "trial_variance": 9.093933764484331e-07,
+            "sr0": 0.00081325243954376,
+            "skew": 1.6352313903101046,
+            "kurtosis": 18.787981846537583,
+            "dsr": 0.024882092568018432
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -1.409757811266377,
+            "oos_sharpe": -3.0741234294862427,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.193651573665181,
+            "observations": 152,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": 1.6352313903101046,
+            "kurtosis": 18.787981846537583,
+            "dsr": 3.976406089956086e-07,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_e7094212a558_C",
+      "run_id": "r_e7094212a558",
+      "source_title": "Beat the Market: An Effective Intraday Momentum Strategy for S&P500 ETF (SPY)",
+      "variant": "C",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -1.2008823258564123,
+            "oos_sharpe": -3.0527146868391366,
+            "oos_to_is_ratio": 2.542059801456471,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 2,
+            "min": 0.95,
+            "daily_sharpe": -0.19230294964311373,
+            "observations": 152,
+            "trial_variance": 9.093933764484331e-07,
+            "sr0": 0.00081325243954376,
+            "skew": 1.6640153818562398,
+            "kurtosis": 18.669644118530062,
+            "dsr": 0.02568172640939137
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": -1.2008823258564123,
+            "oos_sharpe": -3.0527146868391366,
+            "oos_to_is_ratio": null,
+            "sharpe_ok": false,
+            "is_max_window_share": null,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.19230294964311373,
+            "observations": 152,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": 1.6640153818562398,
+            "kurtosis": 18.669644118530062,
+            "dsr": 4.2603670563634566e-07,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_ffbba23dbcff_A",
+      "run_id": "r_ffbba23dbcff",
+      "source_title": "Another look at trading costs and short-term reversal profits",
+      "variant": "A",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": 0.24393745283221505,
+            "oos_sharpe": -0.45125198936333544,
+            "oos_to_is_ratio": -1.849867595664842,
+            "sharpe_ok": false,
+            "is_max_window_share": 0.9506321070019087,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.028426203392346413,
+            "observations": 546,
+            "trial_variance": 2.179578008958346e-05,
+            "sr0": 0.003981398881195006,
+            "skew": -0.43197079407486066,
+            "kurtosis": 5.405214416229876,
+            "dsr": 0.22335581843059438
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": 0.24393745283221505,
+            "oos_sharpe": -0.45125198936333544,
+            "oos_to_is_ratio": -1.849867595664842,
+            "sharpe_ok": false,
+            "is_max_window_share": 0.9506321070019087,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.028426203392346413,
+            "observations": 546,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.43197079407486066,
+            "kurtosis": 5.405214416229876,
+            "dsr": 1.3822276656583199e-14,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_ffbba23dbcff_B",
+      "run_id": "r_ffbba23dbcff",
+      "source_title": "Another look at trading costs and short-term reversal profits",
+      "variant": "B",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": 0.28704557353089255,
+            "oos_sharpe": -0.3646883906940294,
+            "oos_to_is_ratio": -1.2704895121985944,
+            "sharpe_ok": false,
+            "is_max_window_share": 0.8704750292623759,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.022973209233542,
+            "observations": 546,
+            "trial_variance": 2.179578008958346e-05,
+            "sr0": 0.003981398881195006,
+            "skew": -0.6174168754430627,
+            "kurtosis": 7.8697249901041095,
+            "dsr": 0.2632096994126826
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": 0.28704557353089255,
+            "oos_sharpe": -0.3646883906940294,
+            "oos_to_is_ratio": -1.2704895121985944,
+            "sharpe_ok": false,
+            "is_max_window_share": 0.8704750292623759,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.022973209233542,
+            "observations": 546,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.6174168754430627,
+            "kurtosis": 7.8697249901041095,
+            "dsr": 3.497202527569243e-14,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    },
+    {
+      "variant_id": "r_ffbba23dbcff_C",
+      "run_id": "r_ffbba23dbcff",
+      "source_title": "Another look at trading costs and short-term reversal profits",
+      "variant": "C",
+      "voided": false,
+      "is_control": false,
+      "before": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "after": {
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1
+      },
+      "evals_before": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": 0.1626005755822707,
+            "oos_sharpe": -0.5121703209632911,
+            "oos_to_is_ratio": -3.1498678226028125,
+            "sharpe_ok": false,
+            "is_max_window_share": 0.5145184228432872,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 3,
+            "trial_sharpes_supplied": 3,
+            "min": 0.95,
+            "daily_sharpe": -0.03226369757564285,
+            "observations": 546,
+            "trial_variance": 2.179578008958346e-05,
+            "sr0": 0.003981398881195006,
+            "skew": -0.4280401712477563,
+            "kurtosis": 5.383670110752819,
+            "dsr": 0.19722865606918893
+          }
+        }
+      ],
+      "evals_after": [
+        {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 5.0,
+            "is_sharpe": 0.1626005755822707,
+            "oos_sharpe": -0.5121703209632911,
+            "oos_to_is_ratio": -3.1498678226028125,
+            "sharpe_ok": false,
+            "is_max_window_share": 0.5145184228432872,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 1639,
+            "oos_days": 546,
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        },
+        {
+          "number": 5,
+          "name": "deflated_sharpe",
+          "passed": false,
+          "metrics": {
+            "n_trials": 13,
+            "trial_sharpes_supplied": 13,
+            "min": 0.95,
+            "daily_sharpe": -0.03226369757564285,
+            "observations": 546,
+            "trial_variance": 0.030124678266460637,
+            "sr0": 0.29563844450937043,
+            "skew": -0.4280401712477563,
+            "kurtosis": 5.383670110752819,
+            "dsr": 6.6058269965196814e-15,
+            "trial_count": 13,
+            "trial_scope": "all_runs",
+            "trial_variant_ids": [
+              "r_17ac8caf8a59_A",
+              "r_17ac8caf8a59_B",
+              "r_17ac8caf8a59_C",
+              "r_55eebea2c07d_A",
+              "r_55eebea2c07d_B",
+              "r_55eebea2c07d_C",
+              "r_d1b6cda53684_A",
+              "r_d1b6cda53684_C",
+              "r_e7094212a558_B",
+              "r_e7094212a558_C",
+              "r_ffbba23dbcff_A",
+              "r_ffbba23dbcff_B",
+              "r_ffbba23dbcff_C"
+            ],
+            "judgment_revision": "2026-11-14-eval45-global-v2"
+          }
+        }
+      ],
+      "changed_evals": [
+        4,
+        5
+      ],
+      "action": "rejudged"
+    }
+  ],
+  "changed_variants": 16,
+  "backup": "runs/rejudge-backup-2026-11-14T191511422929Z",
+  "applied": true,
+  "applied_at": "2026-11-14T19:15:11.431344Z"
+}

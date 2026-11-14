@@ -234,6 +234,32 @@ class ArtifactRegistry:
                     historical=True,
                     audit_only=True,
                 )
+        for backup in sorted((self.root / "runs").glob("rejudge-backup-*")):
+            for filename in ("factory.db", "events.jsonl", "plan.json", "applied.json"):
+                add(
+                    (backup / filename).relative_to(self.root),
+                    "record_backup",
+                    historical=True,
+                    audit_only=True,
+                )
+        for filename in (
+            "eval45-rejudgment.json",
+            "eval45-rejudgment.md",
+            "eval45-proof.json",
+            "eval45-record-audit.json",
+            "eval45-tearsheet.png",
+            "eval45-rules.png",
+            "wo08-protected-files.json",
+        ):
+            add(
+                f"report/{filename}",
+                "report",
+                historical=True,
+                audit_only=True,
+                notes=[
+                    "Owner-authorized Eval 4/5 revision; includes historical and void evidence."
+                ],
+            )
         for path in sorted((self.root / "runs").glob("events.jsonl.*")):
             # Records preserves divergent mirrors with this specific backup prefix.
             if "backup" in path.name or "conflict" in path.name:

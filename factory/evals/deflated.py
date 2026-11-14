@@ -21,7 +21,7 @@ correlated, so counting them all is conservative).
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from statistics import NormalDist
 
 import numpy as np
@@ -62,38 +62,86 @@ def moments(daily: pd.Series) -> tuple[float, float]:
     return float(np.mean(centred**3) / variance**1.5), float(np.mean(centred**4) / variance**2)
 
 
-def deflated_eval(oos_daily: pd.Series, trial_sharpes: Sequence[float]) -> EvalResult:
-    """`trial_sharpes`: per-day OOS Sharpes (base cost) of every variant that reached
-    Eval 2 in this factory run, this one included. Jitters are not trials.
+def deflated_from_metrics(
+    recorded: Mapping,
+    trial_sharpes: Sequence[float | None],
+    *,
+    trial_variant_ids: Sequence[str] | None = None,
+) -> EvalResult:
+    """Judge retained sufficient statistics against one explicit trial population.
 
-    N = max(DSR_MIN_TRIALS, number of trials); V = sample variance of the trial
-    Sharpes. If V or the DSR cannot be computed the eval fails; it never passes
-    by default.
+    Missing trial Sharpes still count toward N and fail the entire adjustment
+    closed. N retains the configured floor; variance uses every selected trial,
+    never a smaller complete-case subset. No returns or backtests are required.
     """
-    trials = [float(value) for value in trial_sharpes if value is not None]
-    count = max(config.DSR_MIN_TRIALS, len(trials))
-    metrics: dict = {
-        "n_trials": count,
-        "trial_sharpes_supplied": len(trials),
-        "min": config.DSR_MIN,
-    }
-    sharpe = daily_sharpe(oos_daily)
-    metrics.update(daily_sharpe=sharpe, observations=len(oos_daily))
-    if sharpe is None:
-        return EvalResult(5, "deflated_sharpe", False, {**metrics, "reason": "Sharpe undefined"})
+    trials = list(trial_sharpes)
+    if trial_variant_ids is not None and (
+        len(trial_variant_ids) != len(trials) or len(set(trial_variant_ids)) != len(trials)
+    ):
+        raise ValueError("Trial identities must be unique and match the trial values")
+    finite = [v for v in trials if v is not None and math.isfinite(v)]
+    metrics = dict(recorded)
+    metrics.pop("reason", None)
+    metrics.update(
+        n_trials=max(config.DSR_MIN_TRIALS, len(trials)),
+        trial_count=len(trials),
+        trial_sharpes_supplied=len(finite),
+        trial_scope="all_runs" if trial_variant_ids is not None else "supplied",
+        min=config.DSR_MIN,
+        trial_variance=None,
+        sr0=None,
+        dsr=None,
+    )
+    if trial_variant_ids is not None:
+        metrics["trial_variant_ids"] = list(trial_variant_ids)
+    else:
+        metrics.pop("trial_variant_ids", None)
+
+    def failed(reason):
+        return EvalResult(5, "deflated_sharpe", False, {**metrics, "reason": reason})
+
+    if len(finite) != len(trials):
+        return failed("Incomplete trial accounting: undefined trial Sharpe in selected population")
     if len(trials) < 2:
-        return EvalResult(
-            5,
-            "deflated_sharpe",
-            False,
-            {**metrics, "reason": "variance across trials needs at least 2 trial Sharpes"},
-        )
+        return failed("variance across trials needs at least 2 trial Sharpes")
     variance = float(np.var(trials, ddof=1))
-    skew, kurtosis = moments(oos_daily)
-    benchmark = expected_max_sharpe(variance, count)
-    metrics.update(trial_variance=variance, sr0=benchmark, skew=skew, kurtosis=kurtosis)
+    if not math.isfinite(variance):
+        return failed("Variance across recorded trial Sharpes is undefined")
+    benchmark = expected_max_sharpe(variance, metrics["n_trials"])
+    metrics.update(trial_variance=variance, sr0=benchmark)
+    sharpe = metrics.get("daily_sharpe")
+    if sharpe is None or not math.isfinite(sharpe):
+        return failed("Sharpe undefined")
+    observations = metrics.get("observations")
+    skew, kurtosis = metrics.get("skew"), metrics.get("kurtosis")
+    if (
+        not isinstance(observations, int)
+        or observations < 2
+        or any(v is None or not math.isfinite(v) for v in (skew, kurtosis))
+    ):
+        return failed("Incomplete recorded return moments or observation count")
     try:
-        dsr = deflated_sharpe_ratio(sharpe, benchmark, len(oos_daily), skew, kurtosis)
-    except ValueError as error:
-        return EvalResult(5, "deflated_sharpe", False, {**metrics, "reason": str(error)})
-    return EvalResult(5, "deflated_sharpe", dsr >= config.DSR_MIN, {**metrics, "dsr": dsr})
+        dsr = deflated_sharpe_ratio(sharpe, benchmark, observations, skew, kurtosis)
+    except (ValueError, OverflowError) as error:
+        return failed(str(error))
+    metrics["dsr"] = dsr
+    return EvalResult(5, "deflated_sharpe", dsr >= config.DSR_MIN, metrics)
+
+
+def deflated_eval(
+    oos_daily: pd.Series,
+    trial_sharpes: Sequence[float | None],
+    *,
+    trial_variant_ids: Sequence[str] | None = None,
+) -> EvalResult:
+    """Score OOS returns using the selected global population's per-day Sharpes.
+
+    The orchestrator supplies all nonvoid, noncontrol variants across retained
+    runs that reached Eval 2, including this candidate. Jitters are not trials.
+    """
+    sharpe = daily_sharpe(oos_daily)
+    metrics = {"daily_sharpe": sharpe, "observations": len(oos_daily)}
+    if sharpe is not None:
+        skew, kurtosis = moments(oos_daily)
+        metrics.update(skew=skew, kurtosis=kurtosis)
+    return deflated_from_metrics(metrics, trial_sharpes, trial_variant_ids=trial_variant_ids)

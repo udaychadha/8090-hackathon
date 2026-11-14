@@ -79,7 +79,7 @@ def test_artifact_failure_preserves_the_valid_trial(tmp_path, monkeypatch):
     path = tmp_path / "strategy.py"
     path.write_text(CLEAN)
     monkeypatch.setattr(evaluation, "load_bars", lambda *a, **kw: bars())
-    monkeypatch.setattr(evaluation, "evaluate", lambda *a: report)
+    monkeypatch.setattr(evaluation, "evaluate", lambda *a, **kw: report)
     result = evaluation.evaluate_file(path)
     assert result.report is report
     assert result.equity is None and result.artifact_error

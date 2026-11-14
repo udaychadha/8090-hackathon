@@ -123,7 +123,7 @@ def test_void_is_excluded_from_leaderboard_and_trial_accounting(records):
     assert len(records.trial_variants("other")) == 2
 
 
-def test_trial_selection_recognizes_embedded_evals_and_eligibility(records):
+def test_trial_selection_recognizes_embedded_evals_despite_eligibility_flag(records):
     a = payload(records, "variants", "other_A")
     a["eval_eligible"] = False
     records.put("variants", "other_A", "other", a)
@@ -131,7 +131,7 @@ def test_trial_selection_recognizes_embedded_evals_and_eligibility(records):
     c["evals"] = [{"number": 2, "name": "friction", "passed": False, "metrics": {}}]
     c["evals_passed"] = c["default_evals_passed"] = 0
     records.put("variants", "other_C", "other", c)
-    assert {row["variant"] for row in records.trial_variants("other")} == {"B", "C"}
+    assert {row["variant"] for row in records.trial_variants("other")} == {"A", "B", "C"}
 
 
 def test_repeat_void_keeps_original_reason_and_only_one_event(records):

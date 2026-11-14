@@ -17,11 +17,10 @@ from factory.agents.worker import VARIANTS, RepairFailure, propose_parallel, val
 from factory.contract import InactiveStrategy
 from factory.data import DataError, load_bars
 from factory.data_contract.prompts import worker_context
-from factory.evals.common import EvalResult
-from factory.evals.lookahead import LookaheadBiasError
 from factory.evals.runner import with_deflated
 from factory.evaluation import evaluate_file
 from factory.llm import LLMError, model_for
+from factory.trials import trial_cohort
 
 SURVIVORSHIP = "Daily universe uses current index membership; results carry survivorship bias."
 
@@ -33,7 +32,6 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
     records = Records(root / "runs")
     usages, rows, reports = [], {}, {}
     operational_failed = False
-    harness_failed = False
     summary = records.get("runs", run_id, include_voided=True)
     if summary is not None and (summary["status"] != "RUNNING" or summary.get("source")):
         records.close()
@@ -161,7 +159,11 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
                 row["eval_eligible"] = True
                 try:
                     # No failed metric or OOS exception is ever fed back to workers.
-                    evaluation = evaluate_file(path, data_root)
+                    def mark_eval2_started(row=row):
+                        row["reached_eval_2"] = True
+                        _save_row(records, row)
+
+                    evaluation = evaluate_file(path, data_root, on_eval2_started=mark_eval2_started)
                     reports[variant] = evaluation.report
                     row["equity"] = evaluation.equity
                     row["equity_boundaries"] = evaluation.boundaries
@@ -178,28 +180,21 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
                         records.event(
                             run_id, "eval", "failed", evaluation.artifact_error, variant=variant
                         )
-                except Exception as error:
+                except Exception:
                     row["status"] = "BUG_UNRESOLVED"
                     row["notes"].append("Execution/harness failed; no pass claimed, no OOS repair")
                     operational_failed = True
-                    # Lookahead rejection is before Eval 2. An unknown harness error
-                    # may have lost a trial and must still fail DSR accounting closed.
-                    harness_failed |= not isinstance(error, LookaheadBiasError)
                     records.event(
                         run_id, "eval", "failed", "Execution or harness failed", variant=variant
                     )
             finally:
                 rows[variant] = _save_row(records, row)
-        trials = [report.oos_daily_sharpe for report in reports.values()]
+        trial_ids, trials = trial_cohort(
+            records,
+            {rows[v]["variant_id"]: report.oos_daily_sharpe for v, report in reports.items()},
+        )
         for variant, report in reports.items():
-            report = with_deflated(report, trials)
-            if harness_failed or any(value is None for value in trials):
-                report.results[5] = EvalResult(
-                    5,
-                    "deflated_sharpe",
-                    False,
-                    {"reason": "Incomplete sibling trial accounting or undefined trial Sharpe"},
-                )
+            report = with_deflated(report, trials, trial_variant_ids=trial_ids)
             row = rows[variant]
             row.update(
                 status=report.status,
@@ -306,6 +301,7 @@ def _row(spec, run_id, variant):
         "evals_passed": 0,
         "status": "RUNNING",
         "eval_eligible": False,
+        "reached_eval_2": False,
         "days_traded": None,
         "notes": [SURVIVORSHIP] if spec.frequency == "1day" else [],
     }

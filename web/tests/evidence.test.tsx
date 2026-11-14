@@ -28,6 +28,24 @@ describe("evidence presentation", () => {
     });
     expect(lines[0]).toContain("≥ 0.500 × IS -0.400");
     expect(lines[0]).toContain("must exceed 0");
+    expect(lines.join("\n")).toContain("IS Sharpe -0.400 · must exceed 0");
+    expect(lines.join("\n")).toContain("not applicable / unavailable");
+  });
+  it("labels the retained global trial cohort and incomplete-accounting reason", () => {
+    const lines = evalMetricSummary({
+      n: 5,
+      name: "Deflated Sharpe",
+      passed: false,
+      metrics: {
+        n_trials: 13,
+        trial_scope: "all_runs",
+        reason: "Undefined trial Sharpe in selected population",
+      },
+    });
+    expect(lines.join("\n")).toContain("13.000 trials across all runs");
+    expect(lines.join("\n")).toContain(
+      "Undefined trial Sharpe in selected population",
+    );
   });
   it("opens actual pipeline evidence and retains not-run states", () => {
     render(

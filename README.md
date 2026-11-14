@@ -35,6 +35,16 @@ python -m factory.record_migration audit --root runs --report report/record-audi
 python -m factory.record_migration migrate --root runs --report report/record-migration.json
 ```
 
+The owner-authorized Eval 4/5 correction can be applied to retained metrics
+without rerunning strategies. Stop the API first, preview the revision, then
+apply it; the command backs up the records and preserves the original events.
+See [the before/after report](report/eval45-rejudgment.md).
+
+```sh
+python -m factory.rejudge --report report/eval45-preview
+python -m factory.rejudge --apply --report report/eval45-rejudgment
+```
+
 Start the API in one terminal and the interface in another:
 
 ```sh

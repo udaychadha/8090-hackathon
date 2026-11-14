@@ -35,7 +35,9 @@ def run_fixture(monkeypatch):
         Path(path).write_text(code)
         return parse_strategy(code), []
 
-    def evaluate(*args):
+    def evaluate(*args, on_eval2_started=None):
+        if on_eval2_started:
+            on_eval2_started()
         returns = pd.Series([0.01, -0.004, 0.006, 0.002] * 80)
         report = EvalReport(
             {n: EvalResult(n, f"eval{n}", True, {}) for n in range(1, 6)},
@@ -68,8 +70,8 @@ def test_failure_scope(run_fixture, monkeypatch, tmp_path, stage):
             raise LLMError("Repair failed before Eval 2")
         return heal(s, v, *args)
 
-    def failed_evaluate(path, *args):
-        result = evaluate()
+    def failed_evaluate(path, *args, **kwargs):
+        result = evaluate(**kwargs)
         if Path(path).stem == "A":
             if stage == "harness":
                 raise RuntimeError("Failure after Eval 2 started")
@@ -163,9 +165,9 @@ def test_inactive_lane_stops_before_evals_without_poisoning_siblings(
             raise InactiveStrategy({"active_bars": 0, "total_bars": 40, "days_traded": 0})
         return result
 
-    def capture(path, *args):
+    def capture(path, *args, **kwargs):
         evaluated.append(Path(path).stem)
-        return evaluate(path, *args)
+        return evaluate(path, *args, **kwargs)
 
     monkeypatch.setattr(orchestrator, "validate_and_heal", inactive)
     monkeypatch.setattr(orchestrator, "evaluate_file", capture)
