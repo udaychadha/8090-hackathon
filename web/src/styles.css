@@ -1379,3 +1379,38 @@ dialog .code {
 .row > label {
   max-width: 100%;
 }
+
+.gross-diagnostics {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.gross-label {
+  font-weight: 600;
+  color: var(--fg);
+}
+.gross-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s4);
+}
+.gross-outcome {
+  font-weight: 600;
+}
+.gross-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  gap: var(--s4);
+  font-size: var(--caption);
+}
+.diagnostic-row td {
+  padding-top: var(--s2);
+  border-bottom-color: var(--border);
+}
+.gross-compact p {
+  margin: var(--s1) 0;
+}
+@media (max-width: 800px) {
+  .gross-metrics {
+    grid-template-columns: 1fr;
+  }
+}

@@ -16,6 +16,7 @@ from factory.record_models import (
     EvalMetrics,
     Event,
     Frequency,
+    GrossDiagnostics,
     Lane,
     NeedStatus,
     Number,
@@ -58,6 +59,7 @@ class Step(Response):
 
 
 class LeaderboardRow(Response):
+    gross_diagnostics: GrossDiagnostics | None = None
     variant_id: str
     run_id: str
     source_id: str

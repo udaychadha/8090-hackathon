@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { useResource } from "../hooks";
@@ -10,6 +10,7 @@ import {
   laneNames,
 } from "../evidence";
 import { ArtifactLinks } from "../components/Artifacts";
+import { GrossDiagnosticsPanel } from "../components/GrossDiagnostics";
 import { EquityChart } from "../components/Charts";
 import {
   AuditToggle,
@@ -204,7 +205,12 @@ export function LeaderboardPage() {
         <Loading />
       ) : (
         <>
-          <div className="table-wrap">
+          <div
+            className="table-wrap"
+            role="region"
+            aria-label="Leaderboard results"
+            tabIndex={0}
+          >
             <table>
               <thead>
                 <tr>
@@ -240,49 +246,60 @@ export function LeaderboardPage() {
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.variant_id}>
-                    <td className="source-cell">
-                      <Link
-                        to={`/variants/${row.variant_id}${auditSuffix(audit)}`}
-                      >
-                        {row.source_title}
-                      </Link>
-                      <p className="caption">
-                        {row.frequency} · {row.profile} profile
-                      </p>
-                      <Notes
-                        notes={[
-                          ...row.notes,
-                          ...(row.void_reason ? [row.void_reason] : []),
-                        ]}
-                      />
-                    </td>
-                    <td className="mono">{row.variant}</td>
-                    <td>
-                      <Chip>{row.test_type}</Chip>
-                    </td>
-                    <td className="number">
-                      {formatNumber(row.claimed_sharpe)}
-                    </td>
-                    <td
-                      className={`number ${row.status === "VERIFIED" ? "verified-text" : ""}`}
-                    >
-                      {formatNumber(row.verified_sharpe)}
-                    </td>
-                    <td className="number">
-                      {formatNumber(row.break_even_bps, 1)}
-                    </td>
-                    <td className="number">{row.evals_passed}/5</td>
-                    <td>
-                      <StatusPill status={row.status} />
-                      {row.profile !== "default" && (
+                  <Fragment key={row.variant_id}>
+                    <tr>
+                      <td className="source-cell">
+                        <Link
+                          to={`/variants/${row.variant_id}${auditSuffix(audit)}`}
+                        >
+                          {row.source_title}
+                        </Link>
                         <p className="caption">
-                          Default: {row.default_status} ·{" "}
-                          {row.default_evals_passed}/5
+                          {row.frequency} · {row.profile} profile
                         </p>
-                      )}
-                    </td>
-                  </tr>
+                        <Notes
+                          notes={[
+                            ...row.notes,
+                            ...(row.void_reason ? [row.void_reason] : []),
+                          ]}
+                        />
+                      </td>
+                      <td className="mono">{row.variant}</td>
+                      <td>
+                        <Chip>{row.test_type}</Chip>
+                      </td>
+                      <td className="number">
+                        {formatNumber(row.claimed_sharpe)}
+                      </td>
+                      <td
+                        className={`number ${row.status === "VERIFIED" ? "verified-text" : ""}`}
+                      >
+                        {formatNumber(row.verified_sharpe)}
+                      </td>
+                      <td className="number">
+                        {formatNumber(row.break_even_bps, 1)}
+                      </td>
+                      <td className="number">{row.evals_passed}/5</td>
+                      <td>
+                        <StatusPill status={row.status} />
+                        {row.profile !== "default" && (
+                          <p className="caption">
+                            Default: {row.default_status} ·{" "}
+                            {row.default_evals_passed}/5
+                          </p>
+                        )}
+                      </td>
+                    </tr>
+                    <tr className="diagnostic-row">
+                      <td colSpan={8}>
+                        <GrossDiagnosticsPanel
+                          diagnostic={row.gross_diagnostics}
+                          status={row.status}
+                          compact
+                        />
+                      </td>
+                    </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -292,7 +309,8 @@ export function LeaderboardPage() {
           </div>
           <p className="caption">
             “Verified Sharpe” is the recorded OOS metric, net of 5 bps. A metric
-            alone does not confer VERIFIED status. — means not recorded.
+            alone does not confer VERIFIED status. Gross diagnostics never
+            change the verdict or eval count. — means not recorded or undefined.
           </p>
         </>
       )}
@@ -466,6 +484,10 @@ export function TearsheetPage() {
           </table>
         </div>
       </section>
+      <GrossDiagnosticsPanel
+        diagnostic={variant.gross_diagnostics}
+        status={variant.status}
+      />
       <div className="two-col">
         <div className="stack">
           <section className="card">

@@ -221,6 +221,11 @@ class DatasetRegistry:
                         "Event visibility uses available_at only.",
                         "Preview uses the daily price tier's completed-session boundaries; "
                         "HOLDOUT is sealed.",
+                        *[
+                            note
+                            for note in manifest.get("notes", [])
+                            if isinstance(note, str) and note != "unverified source"
+                        ],
                     ],
                 )
                 tier_path = base / "1day/manifest.json"

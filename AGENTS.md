@@ -308,6 +308,30 @@ exhausted), `BLOCKED_DATA` (a data need could not be met).
 Every result also carries `evals_passed` (0–5). Show it everywhere a status is
 shown, so near-misses are visible without touching a threshold.
 
+### Owner-requested gross diagnostics (November 14)
+
+Every variant additionally retains a separate `gross_diagnostics` object:
+`schema_version`, `state` (complete, unavailable, pending), `cost_bps` (0),
+`eval_3` and `eval_4` (nullable existing EvalResult shapes), `label` (nullable),
+and `reason` (nullable). Compute sensitivity and decay with the same parameters,
+splits, jitters, thresholds and pass rules, substituting zero trading cost only.
+Reuse captured strategy targets during normal evaluation; do not execute a new
+model call. Diagnostics never enter the five authoritative eval records, status,
+evals_passed, critic verdict, trial selection or VERIFIED eligibility.
+
+For a failed variant, the deterministic label is `signal before costs` only
+when both gross diagnostics pass; otherwise it is `no signal before costs`.
+When valid signals or required data are unavailable, retain null results and an
+explicit reason beside the label; absence of measurements is not evidence of
+economic failure. Active runs remain pending. Show the label and gross numbers
+on the leaderboard and tearsheet, clearly marked diagnostic, never success-styled
+unless the authoritative status is VERIFIED. Historical diagnostics may execute
+retained code without model calls, self-heal, spec changes or verdict updates.
+
+Both LeaderboardRow and VariantDetail add nullable `gross_diagnostics` with this
+shape. Old records without it remain readable. Zero bps means no trading-cost
+deduction; it does not imply free computation or realistic executable returns.
+
 ## Agents
 
 - **Extractor** — PDF text (pymupdf) -> `StrategySpec`. Fills claimed metrics,

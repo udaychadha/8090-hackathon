@@ -53,7 +53,17 @@ export interface DataNeed {
   provider: string | null;
   candidates: ObjectData[];
 }
+export interface GrossDiagnostics {
+  schema_version: string;
+  state: "complete" | "unavailable" | "pending";
+  cost_bps: 0;
+  eval_3: (Omit<EvalResult, "n"> & { number: number }) | null;
+  eval_4: (Omit<EvalResult, "n"> & { number: number }) | null;
+  label: "signal before costs" | "no signal before costs" | null;
+  reason: string | null;
+}
 export interface LeaderboardRow {
+  gross_diagnostics?: GrossDiagnostics | null;
   variant_id: string;
   run_id: string;
   source_id: string;

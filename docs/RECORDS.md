@@ -28,6 +28,15 @@ null with origin `unknown`; event creation uses the actual recorded timestamp.
 Year-only paper versions remain year-only. Historical source snapshots remain
 independent of the source table's latest extraction.
 
+The November 14 owner extension adds optional typed `gross_diagnostics` on
+Variant and its nested Run snapshot. It contains separate zero-bps sensitivity
+and decay observations, availability state/reason, and a deterministic failed-
+variant label. It never changes authoritative eval records or verdicts. Historical
+backfill preserves every other field, checks for concurrent changes, backs up the
+database, and records before/after evidence fingerprints. Old rows remain readable
+without materializing missing fields. Audit reports and backup metadata are
+available through the interface's explicit audit inventory.
+
 Every write validates before and after credential redaction. Rejected inputs
 are excluded from exception messages. Reads validate payloads and their indexed
 projections. There are indexes for run_id, source_id, variant, status, created_at

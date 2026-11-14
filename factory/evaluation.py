@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from factory import gross_diagnostics
 from factory.contract import activity_summary, read_strategy
 from factory.data import load_bars
 from factory.engine import backtest, daily_compound
@@ -26,6 +27,7 @@ class RecordedEvaluation:
     artifact_error: str | None = None
     activity: dict | None = None
     cost_sharpes: dict | None = None
+    gross_diagnostics: dict | None = None
 
 
 def evaluate_file(
@@ -47,9 +49,19 @@ def evaluate_file(
         )
     run = sandbox_runner(path, timeout=timeout, extra=extra)
     captured = {}
+    jitter_capture = gross_diagnostics.JitterCapture(
+        is_bars, definition.params, definition.frequency
+    )
 
     def record_run(bars, params=None):
-        weights = run(bars, params)
+        try:
+            weights = run(bars, params)
+        except Exception as error:
+            if bars is is_bars and params is not None:
+                jitter_capture.observe(params, error=error)
+            raise
+        if bars is is_bars and params is not None:
+            jitter_capture.observe(params, weights)
         if params is None:
             if bars is is_bars:
                 captured["IS"] = weights.copy()
@@ -68,6 +80,18 @@ def evaluate_file(
         oos_bars,
         on_eval2_started=on_eval2_started,
     )
+    try:
+        diagnostics = gross_diagnostics.diagnostics_from_targets(
+            is_bars,
+            oos_bars,
+            captured["IS"],
+            captured["joined"].loc[lambda w: w.index > captured["IS"].index[-1]],
+            jitter_capture,
+        )
+    except Exception as error:
+        diagnostics = gross_diagnostics.unavailable_diagnostics(
+            f"Gross diagnostics unavailable ({type(error).__name__})."
+        )
     try:
         is_weights = captured["IS"]
         oos_weights = captured["joined"].loc[lambda w: w.index > is_weights.index[-1]]
@@ -99,6 +123,7 @@ def evaluate_file(
             report,
             equity,
             {key: value.isoformat() for key, value in boundaries.items()},
+            gross_diagnostics=diagnostics,
             activity={
                 split: {
                     "active_bars": int(result.executed.ne(0).any(axis=1).sum()),
@@ -126,4 +151,8 @@ def evaluate_file(
     except Exception:
         # A missing chart is an operational failure, not a missing sibling trial:
         # retain this valid report for DSR accounting and diagnose the artifact.
-        return RecordedEvaluation(report, artifact_error="Equity artifact could not be recorded")
+        return RecordedEvaluation(
+            report,
+            artifact_error="Equity artifact could not be recorded",
+            gross_diagnostics=diagnostics,
+        )

@@ -8,6 +8,31 @@ import sqlite3
 from pathlib import Path
 
 
+def verify_historical_records(root):
+    """The owner authorized only separate gross fields on historical evidence."""
+    from scripts.backfill_gross_diagnostics import without_diagnostics
+
+    baseline = json.loads((root / "report/wo12-pre-diagnostics-baseline.json").read_text())
+    if baseline.get("original_payload_bytes_verified") is not True:
+        raise AssertionError("Original payload bytes were not verified before diagnostic changes")
+    unchanged = {}
+    with sqlite3.connect(root / "runs/factory.db") as db:
+        for table, original in baseline["canonical"].items():
+            identity = "seq" if table == "events" else "id"
+            current = {
+                str(key): hashlib.sha256(
+                    json.dumps(
+                        without_diagnostics(json.loads(payload)), sort_keys=True, allow_nan=False
+                    ).encode()
+                ).hexdigest()
+                for key, payload in db.execute(f"SELECT {identity},payload FROM {table}")
+            }
+            if any(current.get(key) != digest for key, digest in original.items()):
+                raise AssertionError(f"Historical {table} changed beyond gross diagnostics")
+            unchanged[table] = len(original)
+    return unchanged
+
+
 def main():
     root = Path(__file__).resolve().parents[1]
     runs = json.loads((root / "report/wo12-runs.json").read_text())
@@ -16,18 +41,7 @@ def main():
         raise ValueError("Both Congress experiments and the control must finish before reporting")
     audit = json.loads((root / "report/wo12-source-audit.json").read_text())
     committee = json.loads((root / "report/wo12-committee-audit.json").read_text())
-    baseline = json.loads((root / "report/wo12-existing-records.json").read_text())
-    unchanged = {}
-    with sqlite3.connect(root / "runs/factory.db") as db:
-        for table, original in baseline.items():
-            identity = "seq" if table == "events" else "id"
-            current = {
-                str(key): hashlib.sha256(payload.encode()).hexdigest()
-                for key, payload in db.execute(f"SELECT {identity},payload FROM {table}")
-            }
-            if any(current.get(key) != digest for key, digest in original.items()):
-                raise AssertionError(f"Historical {table} changed")
-            unchanged[table] = len(original)
+    unchanged = verify_historical_records(root)
     lines = [
         "# WO-12 — Congress experiments",
         "",
@@ -110,7 +124,9 @@ def main():
     lines += [
         "",
         "The SPY control is explicitly marked `is_control` and excluded from Eval 5. "
-        "All pre-WO-12 rows were compared byte-for-byte and remain unchanged.",
+        "All pre-WO-12 rows were verified byte-for-byte before diagnostics were added. "
+        "Their original evidence remains unchanged; only the owner-requested separate "
+        "gross diagnostic fields may have been added.",
         "",
         "Sources: [Congress audit](wo12-source-audit.md), "
         "[committee audit](wo12-committee-audit.md). Raw data and PDFs are not committed.",

@@ -35,3 +35,41 @@ def test_owner_mapping_keeps_both_energy_and_commerce_jurisdictions():
 
     assert COMMITTEES["ENERGY AND COMMERCE"][2] == ["Energy", "Health Care"]
     assert COMMITTEES["ARMED SERVICES"][1:] == ("GICS Sub-Industry", ["Aerospace & Defense"])
+
+
+def test_committee_manifest_explains_empty_eligibility(tmp_path, monkeypatch):
+    import hashlib
+    import json
+
+    from factory.congress import store_congress_events
+
+    monkeypatch.chdir(tmp_path)
+    rows = [
+        {
+            "symbol": "SPY",
+            "transaction_date": "2024-06-01",
+            "filing_date": "2024-06-03",
+            "transaction_type": "purchase",
+            "member_id": "example",
+            "member_name": "Example",
+            "chamber": "house",
+            "source_row_id": "one",
+            "source_filing_id": "filing",
+            "source_url": "https://example.test",
+            "source_commit": "a" * 40,
+        }
+    ]
+    path = tmp_path / "intermediate.json"
+    path.write_text(json.dumps(rows))
+    (tmp_path / "report").mkdir()
+    (tmp_path / "report/wo12-source-audit.json").write_text(
+        json.dumps(
+            {
+                "eligible_intermediate_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+        )
+    )
+    manifest = store_congress_events(path, committee_ids=[], name="congress_committee_trades")
+    assert manifest["committee_qualifying_purchases"] == 0
+    assert any("0 qualifying purchases" in note for note in manifest["notes"])
+    assert "short sample: not a verdict" in manifest["notes"]

@@ -85,6 +85,24 @@ def store_congress_events(
     if destination.exists():
         raise FileExistsError(destination)
     local = frame.available_at.dt.tz_convert("America/New_York")
+    notes = ["unverified source", "Stock classifications and amendment parsing are unverified."]
+    metadata = {}
+    if committee_ids is not None:
+        purchases = frame.loc[frame.committee_match & frame.transaction_type.eq("purchase")]
+        sample = committee_sample_gate(purchases.transaction_date)
+        metadata["committee_qualifying_purchases"] = len(purchases)
+        notes.append(
+            f"{len(purchases)} qualifying purchases; all disclosed rows are retained, "
+            "and only committee_match=true rows qualify for the committee strategy."
+        )
+        notes.append("Committee membership is limited to exact official snapshot dates.")
+        if not sample["verification_eligible"]:
+            notes.append(SHORT_SAMPLE)
+        roster_audit = Path("report/wo12-committee-audit.json")
+        if roster_audit.exists():
+            metadata["committee_audit_sha256"] = hashlib.sha256(
+                roster_audit.read_bytes()
+            ).hexdigest()
     manifest = write_dataset(
         destination,
         frame,
@@ -97,7 +115,8 @@ def store_congress_events(
         through=str(local.max().date()),
         intermediate_sha256=digest,
         verified=False,
-        notes=["unverified source", "Stock classifications and amendment parsing are unverified."],
+        notes=notes,
+        **metadata,
     )
     return manifest
 

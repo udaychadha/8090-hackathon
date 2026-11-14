@@ -419,6 +419,39 @@ class EvalEvidence(Evidence):
     metrics: EvalMetrics = Field(description="Typed numerical evidence from the harness.")
 
 
+class GrossDiagnostics(Evidence):
+    schema_version: Literal["1.0.0"] = Field(description="Gross diagnostic schema version.")
+    state: Literal["complete", "unavailable", "pending"] = Field(
+        description="Whether both diagnostic measurements are available."
+    )
+    cost_bps: Literal[0] = Field(description="Zero trading-cost deduction, diagnostic only.")
+    eval_3: EvalEvidence | None = Field(description="Gross sensitivity; never authoritative.")
+    eval_4: EvalEvidence | None = Field(description="Gross decay; never authoritative.")
+    label: Literal["signal before costs", "no signal before costs"] | None = Field(
+        description="Deterministic diagnostic description for a failed variant only."
+    )
+    reason: StrictStr | None = Field(description="Explicit reason measurements are unavailable.")
+
+    @model_validator(mode="after")
+    def diagnostic_evidence(self):
+        if self.state == "complete":
+            for number, evidence in ((3, self.eval_3), (4, self.eval_4)):
+                if evidence is None or evidence.number != number or evidence.metrics.cost_bps != 0:
+                    raise ValueError("Complete gross diagnostics require matching zero-bps evals")
+        elif self.eval_3 is not None or self.eval_4 is not None:
+            raise ValueError("Pending or unavailable diagnostics cannot contain measured evals")
+        if self.state == "unavailable" and not self.reason:
+            raise ValueError("Unavailable diagnostics require a reason")
+        if self.state == "pending" and self.label is not None:
+            raise ValueError("Pending diagnostics cannot have a result label")
+        if self.label is not None:
+            signal = self.state == "complete" and self.eval_3.passed and self.eval_4.passed
+            expected = "signal before costs" if signal else "no signal before costs"
+            if self.label != expected:
+                raise ValueError("Diagnostic label contradicts recorded gross evidence")
+        return self
+
+
 class EvalResult(Record, EvalEvidence):
     variant: Lane = Field(description="Candidate lane owning this eval result.")
 
@@ -563,6 +596,9 @@ class Voidable(Record):
 
 
 class Variant(Voidable):
+    gross_diagnostics: GrossDiagnostics | None = Field(
+        default=None, description="Separate zero-cost diagnostics; excluded from all verdicts."
+    )
     cost_sharpes: dict[Literal["IS", "OOS"], dict[str, Number | None]] | None = Field(
         default=None, description="Annualized Sharpes by round-trip bps from the captured targets."
     )

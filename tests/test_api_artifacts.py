@@ -5,6 +5,23 @@ import json
 import pytest
 
 
+def test_gross_diagnostic_reports_and_backups_are_audit_evidence(tmp_path):
+    from factory.api.artifacts import ArtifactRegistry
+
+    (tmp_path / "report").mkdir()
+    report = tmp_path / "report/gross-diagnostics-backfill.json"
+    report.write_text('{"rows": []}')
+    backup = tmp_path / "runs/gross-diagnostics-backup-test"
+    backup.mkdir(parents=True)
+    (backup / "factory.db").write_bytes(b"backup metadata only")
+    registry = ArtifactRegistry(tmp_path)
+    assert report.relative_to(tmp_path).as_posix() not in {a.name for a in registry.list()}
+    entries = {a.name: a for a in registry.list(include_voided=True)}
+    assert entries["report/gross-diagnostics-backfill.json"].audit_only
+    stored = entries["runs/gross-diagnostics-backup-test/factory.db"]
+    assert stored.audit_only and not stored.downloadable
+
+
 def test_rejudgment_evidence_is_available_only_in_audit_mode(artifact_root):
     from factory.api.artifacts import ArtifactRegistry
 

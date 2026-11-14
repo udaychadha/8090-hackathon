@@ -99,3 +99,15 @@ def test_upload_size_name_and_symlinks_fail_closed(tmp_path):
         load_extra(tmp_path / "data", ["../oops"], as_of=pd.Timestamp("2024-06-03T00:00Z"))
     with pytest.raises(ValueError):
         load_extra(tmp_path / "data", ["filings"], as_of=pd.Timestamp("2024-06-03T00:00Z"))
+
+
+def test_event_catalog_retains_manifest_sample_limitations(data_root):
+    client = client_for(data_root)
+    dataset = upload(client, "disclosed,ticker\n2024-06-03T14:00Z,SPY\n").json()
+    path = data_root / "data/events/filings.manifest.json"
+    manifest = json.loads(path.read_text())
+    limitation = "0 qualifying purchases; disclosed rows remain with committee_match=false."
+    manifest["notes"] = ["unverified source", limitation]
+    path.write_text(json.dumps(manifest))
+    detail = client.get(f"/api/data/datasets/{dataset['id']}").json()
+    assert limitation in detail["dataset"]["notes"]

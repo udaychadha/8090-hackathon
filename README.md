@@ -113,6 +113,21 @@ hostile Python. The application never places brokerage orders.
 
 ## Checks and evidence
 
+Gross diagnostics report sensitivity and decay at **0 bps** alongside the fixed
+5-bps judgments. They never change status, eval counts or VERIFIED eligibility.
+Future normal runs reuse captured targets; historical backfill replays retained
+code without model calls, repairs or strategy changes:
+
+```sh
+python -m scripts.backfill_gross_diagnostics --apply
+```
+
+The command skips active runs and previously recorded diagnostics, backs up the
+database, and saves `report/gross-diagnostics-backfill.json`. Unavailable results
+show a reason instead of fabricated numbers. Add `--retry-unavailable` only to
+retry those computations; `--variant-id` can select a retained candidate. Zero
+bps removes trading-cost deductions, not runtime or computational work.
+
 ```sh
 .venv/bin/python -m pytest -q
 .venv/bin/ruff check factory tests

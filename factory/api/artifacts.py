@@ -282,6 +282,26 @@ class ArtifactRegistry:
                     "Owner-authorized Eval 4/5 revision; includes historical and void evidence."
                 ],
             )
+        for filename in (
+            "gross-diagnostics-backfill.json",
+            "gross-diagnostics-congress.json",
+            "gross-diagnostics-results.md",
+            "gross-diagnostics-proof.json",
+        ):
+            add(
+                f"report/{filename}",
+                "report",
+                historical=True,
+                audit_only=True,
+                notes=["Separate diagnostic evidence; includes historical and void variants."],
+            )
+        for backup in sorted((self.root / "runs").glob("gross-diagnostics-backup-*")):
+            add(
+                (backup / "factory.db").relative_to(self.root),
+                "record_backup",
+                historical=True,
+                audit_only=True,
+            )
         for path in sorted((self.root / "runs").glob("events.jsonl.*")):
             # Records preserves divergent mirrors with this specific backup prefix.
             if "backup" in path.name or "conflict" in path.name:

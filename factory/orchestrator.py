@@ -19,6 +19,7 @@ from factory.data import DataError, load_bars
 from factory.data_contract.prompts import worker_context
 from factory.evals.runner import with_deflated
 from factory.evaluation import evaluate_file
+from factory.gross_diagnostics import diagnostics_for_status, pending_diagnostics
 from factory.llm import LLMError, model_for
 from factory.trials import trial_cohort
 
@@ -55,6 +56,7 @@ def run_paper(
     run_id = run_id or ("r_" + uuid.uuid4().hex[:12])
     records = Records(root / "runs")
     usages, rows, reports = [], {}, {}
+    gross_by_variant = {}
     operational_failed = False
     summary = records.get("runs", run_id, include_voided=True)
     if summary is not None and (summary["status"] != "RUNNING" or summary.get("source")):
@@ -287,6 +289,7 @@ def run_paper(
 
                     evaluation = evaluate_file(path, data_root, on_eval2_started=mark_eval2_started)
                     reports[variant] = evaluation.report
+                    gross_by_variant[variant] = evaluation.gross_diagnostics
                     row["equity"] = evaluation.equity
                     row["equity_boundaries"] = evaluation.boundaries
                     row["activity"] = evaluation.activity
@@ -335,6 +338,9 @@ def run_paper(
                 break_even_bps=report.results[2].metrics.get("break_even_bps"),
                 evals=[result.to_dict() for result in report.results.values()],
             )
+            row["gross_diagnostics"] = diagnostics_for_status(
+                gross_by_variant.get(variant), row["status"]
+            )
             rows[variant] = _save_row(records, row)
             for number, result in report.results.items():
                 records.put(
@@ -362,7 +368,14 @@ def run_paper(
                     {
                         key: value
                         for key, value in row.items()
-                        if key not in {"code", "params", "equity", "equity_boundaries"}
+                        if key
+                        not in {
+                            "code",
+                            "params",
+                            "equity",
+                            "equity_boundaries",
+                            "gross_diagnostics",
+                        }
                     },
                 )
                 usages.append(usage_record(result))
@@ -428,6 +441,7 @@ def _row(spec, run_id, variant):
         "break_even_bps": None,
         "evals_passed": 0,
         "status": "RUNNING",
+        "gross_diagnostics": pending_diagnostics(),
         "eval_eligible": False,
         "reached_eval_2": False,
         "days_traded": None,
@@ -446,6 +460,7 @@ def _row(spec, run_id, variant):
 
 def _save_row(records, row):
     # Defaults are the only active profile. Refresh projections on every state change.
+    row["gross_diagnostics"] = diagnostics_for_status(row.get("gross_diagnostics"), row["status"])
     row["default_status"] = row["status"]
     row["default_evals_passed"] = row["evals_passed"]
     return records.put("variants", row["variant_id"], row["run_id"], row)

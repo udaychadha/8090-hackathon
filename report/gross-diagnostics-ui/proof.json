@@ -1,0 +1,398 @@
+{
+  "started_at": "2026-11-14T20:39:18.581Z",
+  "base": "http://127.0.0.1:5173",
+  "data_source": "real local API; no request substitution",
+  "variants": [
+    {
+      "variant_id": "r_55eebea2c07d_C",
+      "run_id": "r_55eebea2c07d",
+      "source_title": "Market intraday momentum — first-half-hour sign timing",
+      "status": "FAILED_EVAL_2",
+      "evals_passed": 1,
+      "notes": [],
+      "gross_diagnostics": {
+        "schema_version": "1.0.0",
+        "state": "complete",
+        "cost_bps": 0,
+        "eval_3": {
+          "number": 3,
+          "name": "sensitivity",
+          "passed": false,
+          "metrics": {
+            "base_sharpe": 0.42320951774650273,
+            "worst_sharpe": null,
+            "worst_ratio": null,
+            "min_ratio": 0.5,
+            "cost_bps": 0,
+            "jitters": [
+              {
+                "param": "session_minutes",
+                "fraction": -0.2,
+                "value": 312,
+                "sharpe": null
+              },
+              {
+                "param": "session_minutes",
+                "fraction": -0.1,
+                "value": 351,
+                "sharpe": null
+              },
+              {
+                "param": "session_minutes",
+                "fraction": 0.1,
+                "value": 429,
+                "sharpe": null
+              },
+              {
+                "param": "session_minutes",
+                "fraction": 0.2,
+                "value": 468,
+                "sharpe": null
+              },
+              {
+                "param": "signal_offset",
+                "fraction": -0.2,
+                "value": 23,
+                "sharpe": 0.5574226970485876
+              },
+              {
+                "param": "signal_offset",
+                "fraction": -0.1,
+                "value": 26,
+                "sharpe": 0.3108434956218308
+              },
+              {
+                "param": "signal_offset",
+                "fraction": 0.1,
+                "value": 32,
+                "sharpe": 0.44201980041558064
+              },
+              {
+                "param": "signal_offset",
+                "fraction": 0.2,
+                "value": 35,
+                "sharpe": 0.5588556535921106
+              },
+              {
+                "param": "entry_offset",
+                "fraction": -0.2,
+                "value": 287,
+                "sharpe": 0.782457350769985
+              },
+              {
+                "param": "entry_offset",
+                "fraction": -0.1,
+                "value": 323,
+                "sharpe": 0.9394508894250049
+              },
+              {
+                "param": "entry_offset",
+                "fraction": 0.1,
+                "value": 395,
+                "sharpe": null
+              },
+              {
+                "param": "entry_offset",
+                "fraction": 0.2,
+                "value": 431,
+                "sharpe": null
+              },
+              {
+                "param": "exit_offset",
+                "fraction": -0.2,
+                "value": 311,
+                "sharpe": null
+              },
+              {
+                "param": "exit_offset",
+                "fraction": -0.1,
+                "value": 350,
+                "sharpe": null
+              },
+              {
+                "param": "exit_offset",
+                "fraction": 0.1,
+                "value": 428,
+                "sharpe": null
+              },
+              {
+                "param": "exit_offset",
+                "fraction": 0.2,
+                "value": 467,
+                "sharpe": null
+              }
+            ],
+            "numeric_params_not_jittered": [
+              "trend_sessions",
+              "exposure"
+            ]
+          }
+        },
+        "eval_4": {
+          "number": 4,
+          "name": "decay",
+          "passed": false,
+          "metrics": {
+            "min_ratio": 0.5,
+            "cost_bps": 0,
+            "is_sharpe": 0.42320951774650273,
+            "oos_sharpe": -0.11571707694377752,
+            "oos_to_is_ratio": -0.2734273972852629,
+            "sharpe_ok": false,
+            "is_max_window_share": 0.7575724486915366,
+            "is_total_pnl": 0.020224934366121716,
+            "oos_total_pnl": -0.0013163378587744967,
+            "oos_max_window_share": null,
+            "window_days": 5,
+            "max_share": 0.6,
+            "concentration_ok": false,
+            "is_days": 453,
+            "oos_days": 152
+          }
+        },
+        "label": "no signal before costs",
+        "reason": null
+      }
+    }
+  ],
+  "checks": [
+    {
+      "label": "desktop dark leaderboard",
+      "variant_id": "r_55eebea2c07d_C",
+      "measurements": {
+        "Base Sharpe": 0.42320951774650273,
+        "Worst Sharpe": null,
+        "Worst/base": null,
+        "IS Sharpe": 0.42320951774650273,
+        "OOS Sharpe": -0.11571707694377752,
+        "OOS/IS": -0.2734273972852629,
+        "IS 5-day concentration": 0.7575724486915366,
+        "OOS 5-day concentration": null
+      },
+      "neutral_colors": {
+        "label": "rgb(244, 240, 232)",
+        "foreground": "rgb(244, 240, 232)"
+      }
+    },
+    {
+      "label": "desktop dark leaderboard",
+      "layout": {
+        "width": 1440,
+        "scroll_width": 1440,
+        "diagnostic_overflows": 0
+      }
+    },
+    {
+      "label": "desktop dark tearsheet",
+      "variant_id": "r_55eebea2c07d_C",
+      "measurements": {
+        "Base Sharpe": 0.42320951774650273,
+        "Worst Sharpe": null,
+        "Worst/base": null,
+        "IS Sharpe": 0.42320951774650273,
+        "OOS Sharpe": -0.11571707694377752,
+        "OOS/IS": -0.2734273972852629,
+        "IS 5-day concentration": 0.7575724486915366,
+        "OOS 5-day concentration": null
+      },
+      "neutral_colors": {
+        "label": "rgb(244, 240, 232)",
+        "foreground": "rgb(244, 240, 232)"
+      }
+    },
+    {
+      "label": "desktop dark tearsheet",
+      "layout": {
+        "width": 1440,
+        "scroll_width": 1440,
+        "diagnostic_overflows": 0
+      }
+    },
+    {
+      "label": "desktop light leaderboard",
+      "variant_id": "r_55eebea2c07d_C",
+      "measurements": {
+        "Base Sharpe": 0.42320951774650273,
+        "Worst Sharpe": null,
+        "Worst/base": null,
+        "IS Sharpe": 0.42320951774650273,
+        "OOS Sharpe": -0.11571707694377752,
+        "OOS/IS": -0.2734273972852629,
+        "IS 5-day concentration": 0.7575724486915366,
+        "OOS 5-day concentration": null
+      },
+      "neutral_colors": {
+        "label": "rgb(23, 24, 23)",
+        "foreground": "rgb(23, 24, 23)"
+      }
+    },
+    {
+      "label": "desktop light leaderboard",
+      "layout": {
+        "width": 1440,
+        "scroll_width": 1440,
+        "diagnostic_overflows": 0
+      }
+    },
+    {
+      "label": "desktop light tearsheet",
+      "variant_id": "r_55eebea2c07d_C",
+      "measurements": {
+        "Base Sharpe": 0.42320951774650273,
+        "Worst Sharpe": null,
+        "Worst/base": null,
+        "IS Sharpe": 0.42320951774650273,
+        "OOS Sharpe": -0.11571707694377752,
+        "OOS/IS": -0.2734273972852629,
+        "IS 5-day concentration": 0.7575724486915366,
+        "OOS 5-day concentration": null
+      },
+      "neutral_colors": {
+        "label": "rgb(23, 24, 23)",
+        "foreground": "rgb(23, 24, 23)"
+      }
+    },
+    {
+      "label": "desktop light tearsheet",
+      "layout": {
+        "width": 1440,
+        "scroll_width": 1440,
+        "diagnostic_overflows": 0
+      }
+    },
+    {
+      "label": "mobile dark leaderboard",
+      "variant_id": "r_55eebea2c07d_C",
+      "measurements": {
+        "Base Sharpe": 0.42320951774650273,
+        "Worst Sharpe": null,
+        "Worst/base": null,
+        "IS Sharpe": 0.42320951774650273,
+        "OOS Sharpe": -0.11571707694377752,
+        "OOS/IS": -0.2734273972852629,
+        "IS 5-day concentration": 0.7575724486915366,
+        "OOS 5-day concentration": null
+      },
+      "neutral_colors": {
+        "label": "rgb(244, 240, 232)",
+        "foreground": "rgb(244, 240, 232)"
+      }
+    },
+    {
+      "label": "mobile dark leaderboard",
+      "layout": {
+        "width": 390,
+        "scroll_width": 390,
+        "diagnostic_overflows": 0
+      }
+    },
+    {
+      "label": "mobile-dark-r_55eebea2c07d_C: mobile table scroll",
+      "left": 865,
+      "max": 865
+    },
+    {
+      "label": "mobile dark tearsheet",
+      "variant_id": "r_55eebea2c07d_C",
+      "measurements": {
+        "Base Sharpe": 0.42320951774650273,
+        "Worst Sharpe": null,
+        "Worst/base": null,
+        "IS Sharpe": 0.42320951774650273,
+        "OOS Sharpe": -0.11571707694377752,
+        "OOS/IS": -0.2734273972852629,
+        "IS 5-day concentration": 0.7575724486915366,
+        "OOS 5-day concentration": null
+      },
+      "neutral_colors": {
+        "label": "rgb(244, 240, 232)",
+        "foreground": "rgb(244, 240, 232)"
+      }
+    },
+    {
+      "label": "mobile dark tearsheet",
+      "layout": {
+        "width": 390,
+        "scroll_width": 390,
+        "diagnostic_overflows": 0
+      }
+    },
+    {
+      "label": "mobile light leaderboard",
+      "variant_id": "r_55eebea2c07d_C",
+      "measurements": {
+        "Base Sharpe": 0.42320951774650273,
+        "Worst Sharpe": null,
+        "Worst/base": null,
+        "IS Sharpe": 0.42320951774650273,
+        "OOS Sharpe": -0.11571707694377752,
+        "OOS/IS": -0.2734273972852629,
+        "IS 5-day concentration": 0.7575724486915366,
+        "OOS 5-day concentration": null
+      },
+      "neutral_colors": {
+        "label": "rgb(23, 24, 23)",
+        "foreground": "rgb(23, 24, 23)"
+      }
+    },
+    {
+      "label": "mobile light leaderboard",
+      "layout": {
+        "width": 390,
+        "scroll_width": 390,
+        "diagnostic_overflows": 0
+      }
+    },
+    {
+      "label": "mobile-light-r_55eebea2c07d_C: mobile table scroll",
+      "left": 865,
+      "max": 865
+    },
+    {
+      "label": "mobile light tearsheet",
+      "variant_id": "r_55eebea2c07d_C",
+      "measurements": {
+        "Base Sharpe": 0.42320951774650273,
+        "Worst Sharpe": null,
+        "Worst/base": null,
+        "IS Sharpe": 0.42320951774650273,
+        "OOS Sharpe": -0.11571707694377752,
+        "OOS/IS": -0.2734273972852629,
+        "IS 5-day concentration": 0.7575724486915366,
+        "OOS 5-day concentration": null
+      },
+      "neutral_colors": {
+        "label": "rgb(23, 24, 23)",
+        "foreground": "rgb(23, 24, 23)"
+      }
+    },
+    {
+      "label": "mobile light tearsheet",
+      "layout": {
+        "width": 390,
+        "scroll_width": 390,
+        "diagnostic_overflows": 0
+      }
+    }
+  ],
+  "screenshots": [
+    "report/gross-diagnostics-ui/desktop-dark-r_55eebea2c07d_C-leaderboard.png",
+    "report/gross-diagnostics-ui/desktop-dark-r_55eebea2c07d_C-tearsheet-verdict.png",
+    "report/gross-diagnostics-ui/desktop-dark-r_55eebea2c07d_C-tearsheet-gross.png",
+    "report/gross-diagnostics-ui/desktop-light-r_55eebea2c07d_C-leaderboard.png",
+    "report/gross-diagnostics-ui/desktop-light-r_55eebea2c07d_C-tearsheet-verdict.png",
+    "report/gross-diagnostics-ui/desktop-light-r_55eebea2c07d_C-tearsheet-gross.png",
+    "report/gross-diagnostics-ui/mobile-dark-r_55eebea2c07d_C-leaderboard.png",
+    "report/gross-diagnostics-ui/mobile-dark-r_55eebea2c07d_C-leaderboard-scrolled.png",
+    "report/gross-diagnostics-ui/mobile-dark-r_55eebea2c07d_C-tearsheet-verdict.png",
+    "report/gross-diagnostics-ui/mobile-dark-r_55eebea2c07d_C-tearsheet-gross.png",
+    "report/gross-diagnostics-ui/mobile-light-r_55eebea2c07d_C-leaderboard.png",
+    "report/gross-diagnostics-ui/mobile-light-r_55eebea2c07d_C-leaderboard-scrolled.png",
+    "report/gross-diagnostics-ui/mobile-light-r_55eebea2c07d_C-tearsheet-verdict.png",
+    "report/gross-diagnostics-ui/mobile-light-r_55eebea2c07d_C-tearsheet-gross.png"
+  ],
+  "writes": [],
+  "errors": [],
+  "finished_at": "2026-11-14T20:39:25.901Z",
+  "passed": true
+}
