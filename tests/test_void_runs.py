@@ -23,6 +23,11 @@ def records(tmp_path):
             row = {
                 "variant_id": f"{run_id}_{variant}",
                 "run_id": run_id,
+                "source_id": "p_test",
+                "source_title": "Void evidence fixture",
+                "source_kind": "paper",
+                "test_type": "transfer",
+                "frequency": "1min",
                 "variant": variant,
                 "status": "FAILED_EVAL_2",
                 "evals_passed": 1,
@@ -31,10 +36,16 @@ def records(tmp_path):
                 "verified_sharpe": 0.2,
                 "break_even_bps": 1.4,
                 "code": "original strategy",
-                "equity": {"net": [1.0, 1.01]},
-                "evals": [{"number": 1, "passed": True, "metrics": {}}],
+                "equity": {
+                    "dates": ["2020-01-02", "2020-01-03"],
+                    "gross": [1.0, 1.02],
+                    "net": [1.0, 1.01],
+                    "is_end": "2020-01-02",
+                    "oos_end": "2020-01-03",
+                },
+                "evals": [{"number": 1, "name": "lookahead", "passed": True, "metrics": {}}],
             }
-            store.put("variants", row["variant_id"], run_id, row)
+            row = store.put("variants", row["variant_id"], run_id, row)
             variants.append(row)
             if variant != "C":
                 store.put(
@@ -44,8 +55,9 @@ def records(tmp_path):
                     {
                         "variant": variant,
                         "number": 2,
+                        "name": "friction",
                         "passed": False,
-                        "metrics": {"net_sharpe": 0.2},
+                        "metrics": {"sharpe_by_bps": {"5": 0.2}},
                     },
                 )
         store.put(
@@ -64,7 +76,7 @@ def records(tmp_path):
 
 def test_void_preserves_evidence_and_updates_summary_consistently(records):
     original = payload(records, "variants", "old_A")
-    evidence = list(records.db.execute("SELECT * FROM eval_results"))
+    evidence = records.list("eval_results", include_voided=True)
     other = payload(records, "runs", "other")
     result = records.void_run("old", "All candidates were inactive")
     assert result["status"] == "VOID"
@@ -89,7 +101,13 @@ def test_void_preserves_evidence_and_updates_summary_consistently(records):
         assert row["original_result"][key] == original[key]
     for key in ("code", "equity", "evals"):
         assert row[key] == original[key]
-    assert list(records.db.execute("SELECT * FROM eval_results")) == evidence
+    after = records.list("eval_results", include_voided=True)
+    assert len(after) == len(evidence)
+    for before_row, after_row in zip(evidence, after, strict=True):
+        assert {k: v for k, v in after_row.items() if k != "voided"} == {
+            k: v for k, v in before_row.items() if k != "voided"
+        }
+        assert after_row["voided"] == (after_row["run_id"] == "old")
     assert payload(records, "runs", "other") == other
 
 
@@ -110,7 +128,8 @@ def test_trial_selection_recognizes_embedded_evals_and_eligibility(records):
     a["eval_eligible"] = False
     records.put("variants", "other_A", "other", a)
     c = payload(records, "variants", "other_C")
-    c["evals"] = [{"n": 2, "passed": False, "metrics": {}}]
+    c["evals"] = [{"number": 2, "name": "friction", "passed": False, "metrics": {}}]
+    c["evals_passed"] = c["default_evals_passed"] = 0
     records.put("variants", "other_C", "other", c)
     assert {row["variant"] for row in records.trial_variants("other")} == {"B", "C"}
 

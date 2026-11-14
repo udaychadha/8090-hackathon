@@ -83,7 +83,8 @@ def test_run_records_all_stages_without_metric_healing(tmp_path, monkeypatch):
         json.loads(line) for line in (tmp_path / "runs/events.jsonl").read_text().splitlines()
     ]
     assert all(
-        set(e) == {"seq", "ts", "run_id", "stage", "variant", "status", "message", "data"}
+        {"seq", "ts", "run_id", "stage", "variant", "status", "message", "data"} <= set(e)
+        and e["schema_version"] == "1.0.0"
         for e in events
     )
     assert (tmp_path / "wiki/graveyard.md").read_text().count("postmortem") == 3

@@ -35,7 +35,7 @@ def run_paper(paper, *, data_root="data", output_root="."):
     operational_failed = False
     harness_failed = False
     summary = {"run_id": run_id, "status": "RUNNING", "variants": [], "data_needs": []}
-    records.put("runs", run_id, run_id, summary)
+    summary = records.put("runs", run_id, run_id, summary)
     try:
         for role in ("extractor", "worker", "critic"):
             model_for(role)
@@ -49,8 +49,9 @@ def run_paper(paper, *, data_root="data", output_root="."):
             "spec": spec.model_dump(),
             "provenance": paper_metadata(paper).get("source", {}),
         }
+        source = records.put("sources", spec.paper_id, run_id, source)
         summary["source"] = source
-        records.put("sources", spec.paper_id, run_id, source)
+        summary = records.put("runs", run_id, run_id, summary)
         records.event(run_id, "extract", "passed", "StrategySpec validated")
         records.event(run_id, "data", "started", "Checking existing price data only")
         try:
@@ -68,7 +69,7 @@ def run_paper(paper, *, data_root="data", output_root="."):
                 "provider": None,
                 "candidates": [],
             }
-            records.put("data_needs", need["id"], run_id, need)
+            need = records.put("data_needs", need["id"], run_id, need)
             summary["data_needs"] = [need]
             summary["status"] = "BLOCKED_DATA"
             records.event(run_id, "data", "failed", "Required local data unavailable")
@@ -88,7 +89,7 @@ def run_paper(paper, *, data_root="data", output_root="."):
             "provider": None,
             "candidates": [],
         }
-        records.put("data_needs", need["id"], run_id, need)
+        need = records.put("data_needs", need["id"], run_id, need)
         summary["data_needs"] = [need]
         records.event(run_id, "data", "passed", "Existing price tiers ready")
         schema = worker_context(is_bars, spec.frequency)
@@ -294,8 +295,8 @@ def _row(spec, run_id, variant):
 
 
 def _finish(records, summary, rows, usages, started):
-    for row in rows.values():
-        records.put("variants", row["variant_id"], summary["run_id"], row)
+    for variant, row in rows.items():
+        rows[variant] = records.put("variants", row["variant_id"], summary["run_id"], row)
     summary["variants"] = list(rows.values())
     summary["wall_seconds"] = time.perf_counter() - started
     summary["usage"] = usages
@@ -306,7 +307,7 @@ def _finish(records, summary, rows, usages, started):
     summary["estimated_model_cost_usd"] = (
         sum(item["cost_usd"] for item in usages) if complete_cost else None
     )
-    records.put("runs", summary["run_id"], summary["run_id"], summary)
+    summary = records.put("runs", summary["run_id"], summary["run_id"], summary)
     records.event(
         summary["run_id"],
         "done",

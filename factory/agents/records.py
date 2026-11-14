@@ -1,19 +1,44 @@
-"""Thread-safe SQLite records and a replayable JSONL event mirror."""
+"""Strict typed SQLite records and an evidence-preserving replayable JSONL mirror."""
 
 from __future__ import annotations
 
+import copy
 import fcntl
 import json
 import sqlite3
 import threading
 from dataclasses import asdict
-from datetime import UTC, datetime
 from pathlib import Path
 
+from pydantic import BaseModel, ValidationError
+
+from factory.record_migration import (
+    INDEX_COLUMNS,
+    TABLES,
+    index_values,
+    prepare,
+    setup_schema,
+    utc_now,
+    write_mirror,
+)
+from factory.record_models import RECORD_MODELS, dump
 from factory.redaction import redact
 
-TABLES = {"sources", "runs", "variants", "eval_results", "heal_attempts", "critiques", "data_needs"}
-STAGES = {"intake", "extract", "data", "worker", "heal", "eval", "critic", "done"}
+
+class MigrationRequired(ValueError):
+    """Existing legacy evidence requires an explicit backed-up migration."""
+
+
+def _validated(table, payload):
+    """Return canonical evidence without putting rejected input in exceptions."""
+    try:
+        return dump(RECORD_MODELS[table].model_validate(payload))
+    except ValidationError as error:
+        details = [
+            f"{'.'.join(str(part) for part in item['loc']) or '<record>'}: {item['type']}"
+            for item in error.errors(include_input=False, include_context=False, include_url=False)
+        ]
+        raise ValueError(redact(f"Invalid {table} record: {'; '.join(details)}")) from None
 
 
 class Records:
@@ -22,182 +47,335 @@ class Records:
         self.root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
         self.db = sqlite3.connect(self.root / "factory.db", check_same_thread=False)
-        for table in sorted(TABLES):
-            self.db.execute(
-                f"CREATE TABLE IF NOT EXISTS {table} (id TEXT PRIMARY KEY, "
-                "run_id TEXT NOT NULL, payload TEXT NOT NULL)"
+        tables = {
+            r[0] for r in self.db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        version = self.db.execute("PRAGMA user_version").fetchone()[0]
+        if tables and version != 1:
+            self.db.close()
+            raise MigrationRequired(
+                "Run factory.record_migration audit and migrate before opening legacy records"
             )
-        self.db.execute(
-            "CREATE TABLE IF NOT EXISTS events "
-            "(seq INTEGER PRIMARY KEY AUTOINCREMENT, payload TEXT NOT NULL)"
-        )
-        self.db.commit()
-        # SQLite is authoritative; repair a missing/torn mirror after interruption.
+        with self.db:
+            setup_schema(self.db)
         self._mirror()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     def safe(self, value):
         return redact(value)
 
+    @staticmethod
+    def _table(table):
+        if table not in RECORD_MODELS:
+            raise ValueError("Unknown record table")
+        return table
+
+    def _decode(self, table, row):
+        if row is None:
+            return None
+        columns = [r[1] for r in self.db.execute(f"PRAGMA table_info({table})")]
+        values = dict(zip(columns, row, strict=True))
+        payload = json.loads(values["payload"])
+        result = _validated(table, payload)
+        key = values["seq"] if table == "events" else values["id"]
+        if result["id"] != str(key) or (table == "events" and result["seq"] != key):
+            raise ValueError("Persisted record identity mismatch")
+        for field, expected in index_values(result).items():
+            if values[field] != expected:
+                raise ValueError(f"Persisted record index mismatch: {field}")
+        return result
+
+    def _raw(self, table, identifier):
+        table = self._table(table)
+        key = "seq" if table == "events" else "id"
+        return self._decode(
+            table, self.db.execute(f"SELECT * FROM {table} WHERE {key}=?", (identifier,)).fetchone()
+        )
+
+    @staticmethod
+    def _extensions(payload, path=""):
+        result = {}
+        if isinstance(payload, dict):
+            for key, value in payload.items():
+                nested = f"{path}.{key}".strip(".")
+                if key == "legacy_extensions" and value:
+                    result[nested] = value
+                else:
+                    result.update(Records._extensions(value, nested))
+        elif isinstance(payload, list):
+            for i, value in enumerate(payload):
+                result.update(Records._extensions(value, f"{path}.{i}"))
+        return result
+
+    def _prepared(self, table, identifier, run_id, payload):
+        if isinstance(payload, BaseModel):
+            payload = dump(payload)
+        previous = self._raw(table, identifier)
+        if self._extensions(payload) != self._extensions(previous):
+            # An existing extension may not be removed silently either.
+            raise ValueError("Legacy extensions are reserved for audited migration")
+        value = copy.deepcopy(payload)
+        if previous:
+            for key in ("created_at", "created_at_provenance"):
+                if key in value and value[key] != previous[key]:
+                    raise ValueError("Creation metadata is immutable")
+                value[key] = previous[key]
+        parent = self._raw("runs", run_id)
+        if parent and parent["status"] == "VOID" and not value.get("voided"):
+            raise ValueError("Cannot write eligible evidence to a void run")
+        source_id = (parent or {}).get("source_id")
+        if source_id and value.get("source_id") not in (None, source_id):
+            raise ValueError("Child source identity differs from its parent run")
+        value = prepare(table, identifier, run_id, value, source_id=source_id)
+        # Validate before redact: redact intentionally stringifies arbitrary objects,
+        # which must never turn an invalid typed input into an accepted record.
+        canonical = _validated(table, value)
+        return _validated(table, self.safe(canonical))
+
+    def _write(self, table, identifier, value):
+        indexes = index_values(value)
+        key = "seq" if table == "events" else "id"
+        columns = [key, "payload", *indexes]
+        # Explicit names preserve the original SQLite columns and support additions.
+        placeholders = ",".join("?" for _ in columns)
+        updates = ",".join(f"{name}=excluded.{name}" for name in columns if name != key)
+        self.db.execute(
+            f"INSERT INTO {table}({','.join(columns)}) VALUES({placeholders}) "
+            f"ON CONFLICT({key}) DO UPDATE SET {updates}",
+            (identifier, json.dumps(value, allow_nan=False), *indexes.values()),
+        )
+
     def put(self, table, identifier, run_id, payload):
         if table not in TABLES:
             raise ValueError("Unknown record table")
+        with self.lock, self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            value = self._prepared(table, identifier, run_id, payload)
+            self._write(table, identifier, value)
+        return value
+
+    def _visible(self, payload, include_voided):
+        if include_voided:
+            return True
+        if payload["voided"] or payload.get("status") == "VOID":
+            return False
+        parent = self._raw("runs", payload["run_id"])
+        return not parent or (not parent["voided"] and parent["status"] != "VOID")
+
+    def get(self, table, identifier, *, include_voided=False):
+        """Return a validated dictionary or None, excluding void records by default."""
         with self.lock:
-            self.db.execute(
-                f"INSERT OR REPLACE INTO {table} VALUES (?, ?, ?)",
-                (identifier, run_id, json.dumps(self.safe(payload))),
-            )
-            self.db.commit()
+            value = self._raw(table, identifier)
+            return value if value and self._visible(value, include_voided) else None
+
+    def list(
+        self,
+        table,
+        *,
+        run_id=None,
+        source_id=None,
+        variant=None,
+        status=None,
+        sort_by=None,
+        descending=False,
+        include_voided=False,
+    ):
+        """List canonical typed evidence; explicit audit opt-in includes invalidated rows."""
+        table = self._table(table)
+        clauses, args = [], []
+        for field, value in [
+            ("run_id", run_id),
+            ("source_id", source_id),
+            ("variant", variant),
+            ("status", status),
+        ]:
+            if value is not None:
+                clauses.append(f"{field}=?")
+                args.append(value)
+        key = "seq" if table == "events" else "id"
+        order = sort_by or key
+        if order not in {*INDEX_COLUMNS, key}:
+            raise ValueError("Unsupported record sort field")
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        direction = "DESC" if descending else "ASC"
+        with self.lock:
+            rows = self.db.execute(
+                f"SELECT * FROM {table}{where} ORDER BY {order} {direction}, {key} {direction}",
+                args,
+            ).fetchall()
+            values = [self._decode(table, row) for row in rows]
+            return [value for value in values if self._visible(value, include_voided)]
+
+    def events(self, run_id=None, *, after_seq=0, include_voided=False):
+        return [
+            row
+            for row in self.list("events", run_id=run_id, include_voided=include_voided)
+            if row["seq"] > after_seq
+        ]
 
     def _mirror(self):
+        """Preserve a divergent mirror before recovery; never erase sole evidence."""
         path = self.root / "events.jsonl"
-        # Serialize snapshots across separate runs/processes, not just this instance.
         with (self.root / "events.lock").open("a") as lock:
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
             try:
-                temporary = path.with_suffix(".jsonl.tmp")
-                with temporary.open("w") as stream:
-                    for seq, payload in self.db.execute(
-                        "SELECT seq,payload FROM events ORDER BY seq"
-                    ):
-                        stream.write(json.dumps({**json.loads(payload), "seq": seq}) + "\n")
-                temporary.replace(path)
+                # Validate all durable event records before touching the mirror.
+                events = self.list("events", include_voided=True)
+                expected = [json.dumps(event, allow_nan=False) for event in events]
+                old = path.read_bytes() if path.exists() else b""
+                try:
+                    decoded = [json.loads(line) for line in old.splitlines()]
+                except (ValueError, UnicodeError):
+                    decoded = None
+                if decoded == events:
+                    return
+                # A prefix is the ordinary append-after-commit case, including a
+                # missing mirror. Any other difference is archived before repair.
+                is_prefix = (
+                    decoded is not None
+                    and len(decoded) <= len(events)
+                    and decoded == events[: len(decoded)]
+                )
+                if old and not is_prefix:
+                    stamp = utc_now().replace(":", "").replace(".", "")
+                    archive = self.root / f"events-recovery-{stamp}.jsonl"
+                    archive.write_bytes(old)
+                    archive.with_suffix(".report.json").write_text(
+                        json.dumps(
+                            {
+                                "reason": (
+                                    "Mirror differs from validated SQLite; original bytes archived"
+                                ),
+                                "archive": archive.name,
+                                "sqlite_events": len(events),
+                                "created_at": utc_now(),
+                            },
+                            indent=2,
+                        )
+                        + "\n"
+                    )
+                if expected or path.exists():
+                    write_mirror(self.db, self.root)
             finally:
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
-    def event(self, run_id, stage, status, message, *, variant=None, data=None):
-        if stage not in STAGES or status not in {"started", "passed", "failed", "info"}:
-            raise ValueError("Invalid event stage or status")
-        if variant not in {None, "A", "B", "C"}:
-            raise ValueError("Invalid variant")
-        payload = self.safe(
-            {
-                "ts": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-                "run_id": run_id,
-                "stage": stage,
-                "variant": variant,
-                "status": status,
-                "message": message,
-                "data": data or {},
-            }
+    def _event_value(self, run_id, stage, status, message, *, variant=None, data=None):
+        seq = self.db.execute("SELECT coalesce(max(seq),0)+1 FROM events").fetchone()[0]
+        timestamp = utc_now()
+        value = {
+            "ts": timestamp,
+            "run_id": run_id,
+            "stage": stage,
+            "variant": variant,
+            "status": status,
+            "message": message,
+            "data": {} if data is None else data,
+        }
+        parent = self._raw("runs", run_id)
+        value = prepare(
+            "events",
+            seq,
+            run_id,
+            value,
+            parent_voided=(parent or {}).get("voided", False),
+            source_id=(parent or {}).get("source_id"),
         )
+        canonical = _validated("events", value)
+        return _validated("events", self.safe(canonical))
+
+    def event(self, run_id, stage, status, message, *, variant=None, data=None):
         with self.lock:
-            self.db.execute("INSERT INTO events(payload) VALUES (?)", (json.dumps(payload),))
-            self.db.commit()
+            with self.db:
+                self.db.execute("BEGIN IMMEDIATE")
+                value = self._event_value(
+                    run_id, stage, status, message, variant=variant, data=data
+                )
+                self._write("events", value["seq"], value)
             self._mirror()
+        return value
 
     def void_run(self, run_id, reason):
-        """Invalidate a run without deleting its research evidence.
-
-        The state change and audit event commit together. JSONL is mirrored only
-        after commit; retrying this method repairs a failed mirror without adding
-        another event or replacing the original reason.
-        """
+        """Atomically invalidate parent, all child records and event index flags."""
         if not isinstance(reason, str) or not reason.strip():
             raise ValueError("A nonempty void reason is required")
         reason = self.safe(reason.strip())
         with self.lock:
             with self.db:
-                # Also serialize invalidation through other Records instances.
                 self.db.execute("BEGIN IMMEDIATE")
-                row = self.db.execute("SELECT payload FROM runs WHERE id = ?", (run_id,)).fetchone()
-                if row is None:
+                summary = self._raw("runs", run_id)
+                if summary is None:
                     raise KeyError(run_id)
-                summary = json.loads(row[0])
-                if summary.get("status") != "VOID":
-                    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
-                    variants = {}
-                    for identifier, encoded in self.db.execute(
-                        "SELECT id, payload FROM variants WHERE run_id = ? ORDER BY id",
-                        (run_id,),
-                    ).fetchall():
-                        variant = _void_payload(json.loads(encoded), reason, timestamp)
-                        variants[identifier] = variant
-                        self.db.execute(
-                            "UPDATE variants SET payload = ? WHERE id = ?",
-                            (json.dumps(variant), identifier),
-                        )
+                if summary["status"] != "VOID":
+                    timestamp = utc_now()
+                    # Preserve metrics and text in children; only eligibility metadata changes.
+                    for table in sorted(RECORD_MODELS):
+                        if table == "runs":
+                            continue
+                        for row in self.list(table, run_id=run_id, include_voided=True):
+                            value = (
+                                _void_payload(row, reason, timestamp)
+                                if table == "variants"
+                                else {**row, "voided": True}
+                            )
+                            value = _validated(table, value)
+                            identifier = value["seq"] if table == "events" else value["id"]
+                            self._write(table, identifier, value)
                     summary = _void_payload(summary, reason, timestamp)
-                    # Retain summary-only evidence if an interrupted run did not
-                    # persist its variant table; otherwise use the canonical row.
-                    summary_rows = summary.get("variants", [])
+                    # Keep historic nested snapshots independently; do not replace a
+                    # historical source/variant with its current shared table row.
                     summary["variants"] = [
-                        variants.pop(item.get("variant_id"), None)
-                        or _void_payload(item, reason, timestamp)
-                        for item in summary_rows
-                    ] + list(variants.values())
-                    self.db.execute(
-                        "UPDATE runs SET payload = ? WHERE id = ?",
-                        (json.dumps(summary), run_id),
+                        _void_payload(v, reason, timestamp) for v in summary.get("variants", [])
+                    ]
+                    summary["data_needs"] = [
+                        {**v, "voided": True} for v in summary.get("data_needs", [])
+                    ]
+                    if summary.get("source"):
+                        summary["source"] = {**summary["source"], "voided": True}
+                    summary = _validated("runs", summary)
+                    self._write("runs", run_id, summary)
+                    event = self._event_value(
+                        run_id,
+                        "done",
+                        "info",
+                        f"Run voided: {reason}",
+                        data={"status": "VOID", "reason": reason},
                     )
-                    event = {
-                        "ts": timestamp,
-                        "run_id": run_id,
-                        "stage": "done",
-                        "variant": None,
-                        "status": "info",
-                        "message": f"Run voided: {reason}",
-                        "data": {"status": "VOID", "reason": reason},
-                    }
-                    self.db.execute("INSERT INTO events(payload) VALUES (?)", (json.dumps(event),))
+                    self._write("events", event["seq"], event)
             self._mirror()
             return summary
 
-    def leaderboard(self):
-        """Return eligible variant payloads, excluding invalidated parent runs."""
-        with self.lock:
-            rows = self.db.execute(
-                "SELECT variants.payload, runs.payload FROM variants "
-                "JOIN runs ON runs.id = variants.run_id ORDER BY variants.id"
-            ).fetchall()
+    def leaderboard(self, *, include_voided=False):
         return [
-            variant
-            for encoded, parent in rows
-            if _eligible((variant := json.loads(encoded)), "leaderboard_eligible")
-            and _eligible(json.loads(parent), "leaderboard_eligible")
+            v
+            for v in self.list("variants", include_voided=include_voided)
+            if include_voided or v.get("leaderboard_eligible", True)
         ]
 
-    def trial_variants(self, run_id):
-        """Return eligible siblings that reached Eval 2, including failed trials.
-
-        Legacy rows need no eligibility flag. Persisted eval_results are evidence
-        even when a variant's embedded eval list was not yet written.
-        """
-        with self.lock:
-            parent = self.db.execute("SELECT payload FROM runs WHERE id = ?", (run_id,)).fetchone()
-            if parent is None:
-                raise KeyError(run_id)
-            if not _eligible(json.loads(parent[0]), "eval_eligible"):
-                return []
-            rows = self.db.execute(
-                "SELECT payload FROM variants WHERE run_id = ? ORDER BY id", (run_id,)
-            ).fetchall()
-            results = [
-                json.loads(row[0])
-                for row in self.db.execute(
-                    "SELECT payload FROM eval_results WHERE run_id = ?", (run_id,)
-                )
-            ]
-        reached = {result.get("variant") for result in results if _eval_two(result)}
+    def trial_variants(self, run_id, *, include_voided=False):
+        parent = self.get("runs", run_id, include_voided=True)
+        if parent is None:
+            raise KeyError(run_id)
+        if not include_voided and (parent["voided"] or not parent.get("eval_eligible", True)):
+            return []
+        reached = {
+            v["variant"]
+            for v in self.list("eval_results", run_id=run_id, include_voided=include_voided)
+            if v["number"] == 2
+        }
         return [
-            variant
-            for (encoded,) in rows
-            if _eligible((variant := json.loads(encoded)), "eval_eligible")
-            and (
-                variant.get("variant") in reached
-                or any(_eval_two(result) for result in variant.get("evals", []))
-            )
+            v
+            for v in self.list("variants", run_id=run_id, include_voided=include_voided)
+            if (include_voided or v.get("eval_eligible", True))
+            and (v["variant"] in reached or any(e["number"] == 2 for e in v.get("evals", [])))
         ]
 
     def close(self):
         self.db.close()
-
-
-def _eligible(payload, flag):
-    return payload.get("status") != "VOID" and payload.get(flag, True) is True
-
-
-def _eval_two(result):
-    return result.get("number", result.get("n")) == 2
 
 
 def _void_payload(payload, reason, timestamp):
@@ -219,10 +397,17 @@ def _void_payload(payload, reason, timestamp):
         "original_result": original,
         "leaderboard_eligible": False,
         "eval_eligible": False,
+        "voided": True,
         "void_reason": reason,
         "voided_at": timestamp,
     }
 
 
 def usage_record(completion):
-    return {key: value for key, value in asdict(completion).items() if key != "text"}
+    from factory.record_models import Usage
+
+    return dump(
+        Usage.model_validate(
+            {key: value for key, value in asdict(completion).items() if key != "text"}
+        )
+    )

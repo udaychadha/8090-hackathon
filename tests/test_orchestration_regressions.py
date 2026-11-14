@@ -43,7 +43,16 @@ def run_fixture(monkeypatch):
             returns,
             daily_sharpe(returns),
         )
-        return RecordedEvaluation(report, {"dates": [], "gross": [], "net": []})
+        return RecordedEvaluation(
+            report,
+            {
+                "dates": ["2024-03-11", "2024-03-12"],
+                "gross": [1.01, 1.02],
+                "net": [1.009, 1.018],
+                "is_end": "2024-03-11",
+                "oos_end": "2024-03-12",
+            },
+        )
 
     monkeypatch.setattr(orchestrator, "validate_and_heal", heal)
     monkeypatch.setattr(orchestrator, "evaluate_file", evaluate)
