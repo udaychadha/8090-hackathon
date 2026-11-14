@@ -87,7 +87,8 @@ installed `alpaca-py` rather than trusting memory.
 
 **Daily tier** — 1-day bars, 2016 to present, current S&P 500 constituents
 (save the list used to `data/sp500.csv`; check Alpaca's symbol format for
-share classes such as BRK.B).
+share classes such as BRK.B). Plus four ETFs, SPY QQQ TLT GLD
+(`DAILY_ETFS`), added 2026-11-13 so the WO-03 fixtures run on this tier.
 
 Hygiene:
 - Store timestamps in UTC. Intraday: keep regular hours only, 09:30–16:00

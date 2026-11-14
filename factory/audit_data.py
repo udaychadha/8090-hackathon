@@ -14,7 +14,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 from factory.data import DAILY_LIMITATION, INTRADAY_UNIVERSE, OHLCV, DataError, wide_frames
-from factory.ingest_alpaca import atomic_json, event, read_universe
+from factory.ingest_alpaca import atomic_json, daily_universe, event
 
 
 def check_nvda_split(root: Path, frequency: str) -> dict:
@@ -45,11 +45,7 @@ def audit(root: Path, *, benchmark: bool = True) -> dict:
     report = {"passed": False, "symbols": [], "errors": [], "split_checks": []}
     for frequency in ("1min", "1day"):
         try:
-            universe = (
-                INTRADAY_UNIVERSE
-                if frequency == "1min"
-                else read_universe(root / "sp500.csv").symbol.tolist()
-            )
+            universe = INTRADAY_UNIVERSE if frequency == "1min" else daily_universe(root)
             manifest = json.loads((root / frequency / "manifest.json").read_text())
             if not manifest.get("complete") or set(manifest["symbols"]) != set(universe):
                 raise DataError(f"{frequency}: incomplete or nonstandard universe")

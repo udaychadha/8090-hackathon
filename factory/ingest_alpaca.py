@@ -21,6 +21,7 @@ from alpaca.data.timeframe import TimeFrame
 from dotenv import load_dotenv
 
 from factory.data import (
+    DAILY_ETFS,
     DAILY_LIMITATION,
     INTRADAY_UNIVERSE,
     OHLCV,
@@ -212,6 +213,12 @@ def sp500_universe(root: Path, supplied: Path | None = None) -> list[str]:
     return frame.symbol.tolist()
 
 
+def daily_universe(root: Path, supplied: Path | None = None) -> list[str]:
+    """S&P 500 constituents followed by the daily-tier ETFs."""
+    constituents = sp500_universe(root, supplied)
+    return constituents + [symbol for symbol in DAILY_ETFS if symbol not in constituents]
+
+
 def month_ranges(start: str, through: str):
     left, final = pd.Timestamp(start), pd.Timestamp(through)
     while left <= final:
@@ -324,7 +331,11 @@ def ingest_tier(client, root, frequency, symbols, start, through):
             "adjustment",
             "normalizer_version",
         )
-        if any(previous.get(key) != manifest[key] for key in stable):
+        # Appending symbols to an otherwise identical snapshot is a resume, not a new one.
+        appended = previous.get("symbols") == symbols[: len(previous.get("symbols", []))]
+        if any(previous.get(key) != manifest[key] for key in stable if key != "symbols") or (
+            not appended
+        ):
             raise DataError("Existing tier uses a different snapshot. Select a new --data-root.")
     atomic_json(manifest_path, manifest)
     failed = []
@@ -397,7 +408,7 @@ def main(argv=None) -> int:
                 symbols = args.symbols or (
                     INTRADAY_UNIVERSE
                     if frequency == "1min"
-                    else sp500_universe(root, args.sp500_csv)
+                    else daily_universe(root, args.sp500_csv)
                 )
                 if len(symbols) != len(set(symbols)):
                     raise DataError("Symbols must be unique")

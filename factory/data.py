@@ -24,6 +24,9 @@ INTRADAY_UNIVERSE = (
     "WMT TGT MRK PFE AAPL MSFT AMZN GOOGL META TSLA NFLX AVGO "
     "COST UNH JNJ PG DIS CSCO INTC BA"
 ).split()
+# Daily tier = current S&P 500 constituents plus these ETFs (owner decision,
+# 2026-11-13: the WO-03 fixtures need them on the 2016+ sample).
+DAILY_ETFS = ["SPY", "QQQ", "TLT", "GLD"]
 DAILY_LIMITATION = (
     "The daily universe is today's S&P 500 membership; results carry survivorship bias."
 )
@@ -196,37 +199,3 @@ def wide_frames(bars: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
         ).sort_index()
         for column in OHLCV
     }
-
-
-def daily_from_intraday(bars: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
-    """Aggregate regular-hours minute bars to one bar per New York session.
-
-    For symbols that exist only in the intraday tier (the ETFs). Timestamps
-    follow the daily tier: New York midnight of the session, in UTC.
-    """
-    result = {}
-    for symbol, frame in bars.items():
-        sessions = frame.index.tz_convert("America/New_York").normalize()
-        daily = frame.groupby(sessions).agg(
-            {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
-        )
-        daily.index = daily.index.tz_convert("UTC").rename("timestamp")
-        result[symbol] = normalize_bars(daily)
-    return result
-
-
-def daily_splits_from_intraday(
-    root: Path | str, symbols: list[str]
-) -> tuple[dict[str, pd.DataFrame], dict[str, pd.DataFrame]]:
-    """(IS, OOS) daily bars for intraday-tier symbols. HOLDOUT is not loaded.
-
-    The intraday split falls mid-session, so that session would appear,
-    partially, on both sides. It is dropped from both.
-    """
-    in_sample = daily_from_intraday(load_bars(root, "1min", symbols, split="IS"))
-    out_sample = daily_from_intraday(load_bars(root, "1min", symbols, split="OOS"))
-    for symbol in symbols:
-        shared = in_sample[symbol].index.intersection(out_sample[symbol].index)
-        in_sample[symbol] = in_sample[symbol].drop(shared)
-        out_sample[symbol] = out_sample[symbol].drop(shared)
-    return in_sample, out_sample

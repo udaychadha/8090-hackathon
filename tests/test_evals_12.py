@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from factory.contract import read_strategy
-from factory.data import daily_splits_from_intraday
+from factory.data import load_bars
 from factory.evals import config
 from factory.evals.friction import break_even_bps, friction_eval
 from factory.evals.lookahead import LookaheadBiasError, first_difference, lookahead_eval
@@ -14,7 +14,7 @@ from factory.evals.runner import sandbox_runner
 FIXTURES = Path(__file__).parent / "fixtures"
 DATA = Path(__file__).parent.parent / "data"
 needs_data = pytest.mark.skipif(
-    not (DATA / "1min" / "manifest.json").exists(), reason="intraday tier not ingested"
+    not (DATA / "1day" / "SPY.parquet").exists(), reason="daily tier with ETFs not ingested"
 )
 
 
@@ -107,24 +107,19 @@ def test_friction_passes_a_cheap_steady_earner():
 
 
 def etf_daily_is(symbols):
-    # The daily tier is S&P 500 constituents only; the fixture ETFs live in the
-    # intraday tier, so daily bars are aggregated from its IS split.
-    return daily_splits_from_intraday(DATA, list(symbols))[0]
+    return load_bars(DATA, "1day", list(symbols), split="IS")
 
 
 @needs_data
 def test_real_data_fixture_acceptance():
-    """WO-03 acceptance on real IS data (daily bars built from the intraday tier)."""
+    """WO-03 acceptance on real IS data (daily tier, 2016 onward)."""
     rigged = etf_daily_is(["SPY"])
     with pytest.raises(LookaheadBiasError) as error:
         lookahead_eval(sandbox_runner(FIXTURES / "rigged.py"), rigged)
     assert error.value.symbol == "SPY" and error.value.timestamp in rigged["SPY"].index
     result, weights = lookahead_eval(sandbox_runner(FIXTURES / "rigged_fixed.py"), rigged)
     assert result.passed
-    # On this sample the flipper lands within 0.01 of the Eval 2 threshold, so its
-    # real-data outcome is recorded in work-orders/WO-03.md rather than asserted.
-    # The deterministic "fails Eval 2" check is the synthetic test above.
-    friction_eval(rigged, weights, "1day")
+    assert not friction_eval(rigged, weights, "1day").passed
     bars = etf_daily_is(read_strategy(FIXTURES / "clean.py").universe)
     result, weights = lookahead_eval(sandbox_runner(FIXTURES / "clean.py"), bars)
     assert result.passed
