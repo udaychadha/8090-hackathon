@@ -77,6 +77,8 @@ def validate_and_heal(spec, variant, code, is_bars, path, records, run_id):
             lookahead_eval(sandbox_runner(path), is_bars)
         except (ContractViolation, StrategyExecutionError, LookaheadBiasError) as error:
             detail = str(error)
+            if isinstance(error, StrategyExecutionError):
+                detail += "\n" + (getattr(error, "remote_traceback", "") or "")
             if pending is not None:
                 records.put(
                     "heal_attempts",

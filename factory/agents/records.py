@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import sqlite3
@@ -34,11 +35,24 @@ class Records:
         self._mirror()
 
     def safe(self, value):
-        text = json.dumps(value, allow_nan=False, default=str)
-        for name, secret in os.environ.items():
-            if secret and ("KEY" in name or "TOKEN" in name or "SECRET" in name):
-                text = text.replace(secret, "[REDACTED]")
-        return json.loads(text)
+        secrets = [
+            secret
+            for name, secret in os.environ.items()
+            if secret and ("KEY" in name or "TOKEN" in name or "SECRET" in name)
+        ]
+
+        def scrub(item):
+            if isinstance(item, str):
+                for secret in secrets:
+                    item = item.replace(secret, "[REDACTED]")
+                return item
+            if isinstance(item, dict):
+                return {scrub(str(key)): scrub(val) for key, val in item.items()}
+            if isinstance(item, list):
+                return [scrub(val) for val in item]
+            return item
+
+        return scrub(json.loads(json.dumps(value, allow_nan=False, default=str)))
 
     def put(self, table, identifier, run_id, payload):
         if table not in TABLES:
@@ -52,11 +66,19 @@ class Records:
 
     def _mirror(self):
         path = self.root / "events.jsonl"
-        temporary = path.with_suffix(".jsonl.tmp")
-        with temporary.open("w") as stream:
-            for seq, payload in self.db.execute("SELECT seq,payload FROM events ORDER BY seq"):
-                stream.write(json.dumps({**json.loads(payload), "seq": seq}) + "\n")
-        temporary.replace(path)
+        # Serialize snapshots across separate runs/processes, not just this instance.
+        with (self.root / "events.lock").open("a") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            try:
+                temporary = path.with_suffix(".jsonl.tmp")
+                with temporary.open("w") as stream:
+                    for seq, payload in self.db.execute(
+                        "SELECT seq,payload FROM events ORDER BY seq"
+                    ):
+                        stream.write(json.dumps({**json.loads(payload), "seq": seq}) + "\n")
+                temporary.replace(path)
+            finally:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
     def event(self, run_id, stage, status, message, *, variant=None, data=None):
         if stage not in STAGES or status not in {"started", "passed", "failed", "info"}:
