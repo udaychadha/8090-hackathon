@@ -1,5 +1,9 @@
 # Financial Models In the Arena
 
+Current experimental work is checkpointed in
+[report/WO12-CHECKPOINT.md](report/WO12-CHECKPOINT.md). The implementation is
+merged independently of the still-running Congress acceptance experiments.
+
 A paper goes in, three strategy candidates come out, and deterministic code
 judges them. The local application exposes failed runs, repair attempts, all
 five evals, source documents, data coverage and logs. No model can change an

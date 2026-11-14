@@ -1,0 +1,97 @@
+{
+  "control": {
+    "run_id": "r_75d07564e86a",
+    "status": "COMPLETED",
+    "wall_seconds": 5.805022959015332,
+    "estimated_model_cost_usd": 0.0,
+    "cost_complete": true,
+    "spec_sha256": null,
+    "variants": [
+      {
+        "variant_id": "r_75d07564e86a_A",
+        "variant": "A",
+        "status": "FAILED_EVAL_5",
+        "evals_passed": 4,
+        "days_traded": 1639,
+        "cost_sharpes": {
+          "IS": {
+            "0": 0.7383353771920358,
+            "2": 0.7382515716264045,
+            "5": 0.7381257993229096,
+            "10": 0.7379160083661803
+          },
+          "OOS": {
+            "0": 1.153713934646096,
+            "2": 1.1533986017125892,
+            "5": 1.15292523667029,
+            "10": 1.1521353215458157
+          }
+        },
+        "notes": [
+          "Daily universe uses current index membership; results carry survivorship bias.",
+          "Buy-and-hold control; excluded from Eval 5 trial accounting."
+        ]
+      }
+    ]
+  },
+  "invalid_attempts": [
+    {
+      "run_id": "r_a0a8786ea3ff",
+      "status": "VOID",
+      "wall_seconds": 300.52134004200343,
+      "estimated_model_cost_usd": 3.0869281,
+      "cost_complete": true,
+      "spec_sha256": "5c7ee2d1418ac7364981042433348eb04085c263a7b7d71cdbbe054349eb2c60",
+      "variants": [
+        {
+          "variant_id": "r_a0a8786ea3ff_A",
+          "variant": "A",
+          "status": "BUG_UNRESOLVED",
+          "evals_passed": 0,
+          "days_traded": null,
+          "cost_sharpes": null,
+          "notes": [
+            "Daily universe uses current index membership; results carry survivorship bias.",
+            "unverified source",
+            "Third-party disclosure parsing and amendments are unverified.",
+            "GICS classifications and stock universe are current snapshots, not point-in-time."
+          ]
+        },
+        {
+          "variant_id": "r_a0a8786ea3ff_B",
+          "variant": "B",
+          "status": "BUG_UNRESOLVED",
+          "evals_passed": 0,
+          "days_traded": null,
+          "cost_sharpes": null,
+          "notes": [
+            "Daily universe uses current index membership; results carry survivorship bias.",
+            "unverified source",
+            "Third-party disclosure parsing and amendments are unverified.",
+            "GICS classifications and stock universe are current snapshots, not point-in-time."
+          ]
+        },
+        {
+          "variant_id": "r_a0a8786ea3ff_C",
+          "variant": "C",
+          "status": "BUG_UNRESOLVED",
+          "evals_passed": 0,
+          "days_traded": null,
+          "cost_sharpes": null,
+          "notes": [
+            "Daily universe uses current index membership; results carry survivorship bias.",
+            "unverified source",
+            "Third-party disclosure parsing and amendments are unverified.",
+            "GICS classifications and stock universe are current snapshots, not point-in-time."
+          ]
+        }
+      ],
+      "void_reason": "Harness lint incorrectly rejected ServiceNow ticker NOW as a wall-clock request. No performance evaluation was reached; frozen spec unchanged."
+    }
+  ],
+  "congress_all": {
+    "run_id": "r_587be5f49c30",
+    "status": "RUNNING",
+    "spec_sha256": "5c7ee2d1418ac7364981042433348eb04085c263a7b7d71cdbbe054349eb2c60"
+  }
+}

@@ -214,6 +214,7 @@ class ArtifactRegistry:
             "wo12-runs.json",
             "wo12-results.md",
             "wo12-proof.json",
+            "WO12-CHECKPOINT.md",
         ):
             add(f"report/{filename}", "report", notes=["Owner-approved WO-12 event-data evidence."])
 

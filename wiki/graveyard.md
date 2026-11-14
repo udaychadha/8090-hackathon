@@ -510,3 +510,33 @@ Qualitative review questions (model-selected; fixed wording):
 - Which observation and execution conventions need reconciliation with the source paper?
 - Are the required inputs available when each signal is formed?
 - Which transaction-cost assumptions need comparison with the source?
+
+## Congress purchase basket vs SPY | r_a0a8786ea3ff | A
+
+BUG_UNRESOLVED (0/5)
+
+Qualitative review questions (model-selected; fixed wording):
+
+- Are the required inputs available when each signal is formed?
+- How does the available asset universe compare with the paper's sample?
+- Which observation and execution conventions need reconciliation with the source paper?
+
+## Congress purchase basket vs SPY | r_a0a8786ea3ff | B
+
+BUG_UNRESOLVED (0/5)
+
+Qualitative review questions (model-selected; fixed wording):
+
+- Are the required inputs available when each signal is formed?
+- How does the available asset universe compare with the paper's sample?
+- Which parameter interpretations remain ambiguous in the specification?
+
+## Congress purchase basket vs SPY | r_a0a8786ea3ff | C
+
+BUG_UNRESOLVED (0/5)
+
+Qualitative review questions (model-selected; fixed wording):
+
+- Are the required inputs available when each signal is formed?
+- How does the available asset universe compare with the paper's sample?
+- Which parameter interpretations remain ambiguous in the specification?
