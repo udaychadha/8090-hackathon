@@ -1,71 +1,141 @@
 # AGENTS.md — Financial Models In the Arena
 
-A software factory for quantitative research. A paper goes in; three candidate
-strategy implementations come out; a deterministic verification harness decides
-which, if any, survive. Built for the 8090 EVOLVE hackathon.
+A software factory for quantitative research. A trading idea goes in, either as
+a research paper or as a plain-English description. Three candidate
+implementations come out. A deterministic verification harness decides which,
+if any, survive. The product is a web app, not a CLI. Built for the 8090 EVOLVE
+hackathon.
 
-**Hard deadline: code freeze Saturday Nov 14, 3:30pm PT.** Feature freeze 1:00pm.
+**Hard deadline: code freeze Saturday Nov 14, 3:30pm PT. Feature freeze 1:00pm.**
+
+## Status (Fri Nov 13, 10:15pm PT)
+
+**Plan change, Fri 10:40pm:** parallel tracks are dropped. One session, one
+folder, one ordered queue (see "Order of work"). WO-16 added.
+
+Done and merged on `main`: WO-01 data, WO-02 contract/engine/sandbox, WO-03
+Evals 1–2, WO-04 Evals 3–5. Records are in `work-orders/WO-01..04.md`; the
+choices recorded there stand.
+
+Measured so far:
+- One full five-eval pass on an intraday strategy: 12.3 s.
+- `tests/fixtures/clean.py` (daily vol-scaled trend): passes Evals 1 and 4,
+  fails Eval 2 at Sharpe 0.47 against the 0.5 threshold, fails Eval 5.
+  Expect few or zero `VERIFIED` results. That is acceptable; do not tune.
 
 ## The one idea to protect
 
 LLM agents write strategy code. **Only deterministic, non-LLM code judges it.**
-The analogy we are demoing: paper = ticket, strategy = pull request, strategy evals = CI,
-strategy eval failure fed back to the worker = the factory loop.
+The analogy we are demoing: idea = ticket, strategy = pull request, strategy
+evals = CI, eval failure fed back to the worker = the factory loop.
 
 Rules that follow from this:
 
-- Never weaken, skip or special-case a strategy eval to get a pass. "0 of 15 verified"
-  is a valid and interesting result.
+- Never weaken, skip or special-case a strategy eval to get a pass. Agents may
+  not change the default values in `factory/evals/config.py`. Users may adjust
+  thresholds only through eval profiles, inside fixed bounds (WO-16); the
+  default verdict is always computed and shown.
 - Workers never see out-of-sample or holdout data. Only the harness touches it.
-- Self-healing is allowed for **bugs only** (runtime error, contract violation,
+- Self-healing is for **bugs only** (runtime error, contract violation,
   lookahead leak). A strategy that fails Evals 2–5 is dead. Re-prompting until
-  it passes is overfitting to the strategy evals.
+  it passes is overfitting to the evals.
 - No LLM call may influence a pass/fail decision.
+- Every dataset that is not price bars carries an `available_at` timestamp
+  (when the world could have known it). Strategies only ever see rows whose
+  `available_at` is in the past. No exceptions for user uploads.
+- Secrets (API keys) live in a server-side secrets file or the environment.
+  They never appear in the database, `events.jsonl`, logs, API responses, or
+  any model prompt.
+- Data found online is never downloaded or used until the owner approves that
+  specific source in the interface.
+- This product backtests. It never places orders.
 
-## Assumptions (owner has not confirmed; ask if any blocks you)
+## How an idea flows
 
-- Solo builder, Python 3.11+, runs on a laptop.
-- LLM calls go through the Anthropic Python SDK. Model name comes from
-  `ANTHROPIC_MODEL`; key from `ANTHROPIC_API_KEY`. Do not hardcode either.
-- Alpaca keys in `APCA_API_KEY_ID` / `APCA_API_SECRET_KEY`, free plan.
-- Never commit keys or `data/`.
+```
+ paper PDF ──> Extractor ─┐
+                          ├─> StrategySpec ─> Data needs check ─> 3 Workers
+ English ───> Intake chat ┘                    (fetch / ask / stop)     │
+                                                                         v
+        Leaderboard + tearsheet <─ Critic <─ Strategy evals <─ bug-only self-heal
+```
+
+Everything after `StrategySpec` is the same path for both front doors.
+
+## Configuration
+
+- Python 3.11+, runs on a laptop, single user, no auth.
+- Model per role, each as `provider:model-id`, read from the environment:
+  `EXTRACTOR_MODEL`, `INTAKE_MODEL`, `WORKER_MODEL`, `CRITIC_MODEL`,
+  `FINDER_MODEL`. Supported providers: `anthropic`, `openai`. Keys:
+  `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. One thin wrapper, `factory/llm.py`,
+  is the only place SDKs are imported. Never hardcode a model id.
+- Alpaca keys: `APCA_API_KEY_ID` / `APCA_API_SECRET_KEY`, free plan.
+- Never commit keys, `data/`, or PDFs.
 
 ## Scope
 
 In:
-- Two-tier Parquet market data
-- Strategy contract + backtest engine
-- Five strategy evals
-- Extractor -> 3 workers -> strategy evals -> bug-only self-heal -> critic
-- SQLite run records, static HTML leaderboard, JSONL event log
+- Two-tier Parquet market data (done), data catalog, event datasets
+- Strategy contract, backtest engine, five strategy evals (done)
+- Paper front door: extractor
+- English front door: intake chat with follow-up questions
+- Data needs check: on disk / fetch / ask for a provider key / upload / stop
+- 3 workers, bug-only self-heal, critic
+- SQLite records, JSONL events, HTTP API with live event stream
+- Web interface
 
-Out (do not build unless every work order below is done):
+Out:
+- Order placement or live trading of any kind
+- Auth, multi-user, deployment
 - arXiv batch harvester (papers are hand-supplied PDFs)
-- Next.js dashboard, SSE streaming
 - HydraDB or any vector/graph store
-- Reconciled multi-section wiki (a single `wiki/graveyard.md` is enough)
-- Strategy synthesis (stretch, see WO-09)
+- Reconciled multi-section wiki (`wiki/graveyard.md` is enough)
+- Strategy synthesis (dropped in favour of the English front door)
+
+## Order of work
+
+One session at a time, in this folder, in this order. Finish and commit each
+before starting the next.
+
+| # | Work order | What it delivers |
+|---|------------|------------------|
+| 1 | WO-05, WO-06, WO-07 | One paper through the whole pipeline |
+| 2 | WO-09 | HTTP API over the results |
+| 3 | WO-08 | Web interface, built directly on the live API |
+| 4 | WO-15 | 3–5 papers on the leaderboard |
+| 5 | WO-10 | Describe a strategy in English |
+| 6 | WO-16 | Rules screen: bounded, explained eval thresholds |
+| 7 | WO-11, WO-12, WO-13, WO-14 | Data needs: fetch, upload, providers, finder |
+
+Rows 1–4 are the demo. Rows 5–7 are extras in priority order; start one only
+when everything above it is merged. Unfinished work stays on its branch.
 
 ## Repo layout
 
 ```
 data/            # parquet, gitignored
+  1min/ 1day/    # price tiers (done)
+  events/        # non-price datasets, each with available_at
+  catalog.json   # what is on disk
 papers/          # PDFs + extracted spec JSON
-strategies/      # generated: {paper_id}/{variant}.py
-runs/            # factory.db (SQLite), events.jsonl
+strategies/      # generated: {source_id}/{variant}.py
+runs/            # factory.db (SQLite), events.jsonl, secrets.env
 wiki/graveyard.md
-report/          # generated leaderboard.html
 factory/
-  ingest_alpaca.py
-  contract.py    # StrategySpec, loader, contract validation
-  engine.py      # backtest: lag, costs, returns, Sharpe
-  evals/         # lookahead.py friction.py sensitivity.py decay.py deflated.py
-  agents/        # extractor.py worker.py critic.py
-  sandbox.py     # subprocess runner with timeout
+  data.py ingest_alpaca.py audit_data.py     # done
+  contract.py engine.py sandbox.py           # done
+  evals/                                     # done; do not edit config.py
+  llm.py           # provider wrapper
+  agents/          # extractor.py worker.py critic.py
   orchestrator.py
-  report.py
+  intake.py        # English front door
+  data_needs.py    # catalog + resolver
+  providers/       # base.py alpaca.py databento.py
+  api/             # FastAPI app
+web/               # interface, talks to /api only
 tests/
-work-orders/     # one .md per WO below, copied from this file
+work-orders/       # one .md per work order
 ```
 
 ## Data
@@ -74,38 +144,24 @@ The canonical data contract is `factory/data_contract/contract.yaml`. Its genera
 reference is [docs/DATA.md](docs/DATA.md); use it for fields, units, timestamp
 meaning, session offsets, fill provenance and dataset validation rules.
 
-Two tiers. Both: `feed=sip`, `adjustment=all` (Alpaca defaults to raw prices;
-without this every split looks like a crash). Free plan cannot query the most
-recent 15 minutes, so end the range at yesterday. Page size max is 10,000 data
-points across all symbols in a request; follow `next_page_token`. Rate limit
-200 requests/min: throttle and retry. Confirm class and enum names against the
-installed `alpaca-py` rather than trusting memory.
+Built and audited; see `work-orders/WO-01.md`. Summary of what exists:
 
-**Intraday tier** — 1-minute bars, last 3 years, 50 symbols:
+- **Intraday tier** — 1-minute SIP bars, split/dividend adjusted, 3 years,
+  regular hours, 50 symbols:
+  - ETFs: SPY QQQ IWM DIA TLT GLD XLF XLE XLK XLV XLY XLP XLI XLU
+  - Pairs: KO PEP, XOM CVX, NVDA AMD, JPM BAC, V MA, HD LOW, GS MS, UPS FDX,
+    WMT TGT, MRK PFE
+  - Singles: AAPL MSFT AMZN GOOGL META TSLA NFLX AVGO COST UNH JNJ PG DIS
+    CSCO INTC BA
+- **Daily tier** — 1-day bars, 2016 to present, current S&P 500 constituents
+  (`data/sp500.csv`) plus `DAILY_ETFS` (SPY QQQ TLT GLD).
+- UTC timestamps; one file per symbol per tier.
+- **Splits, chronological, per tier:** IS = first 60%, OOS = next 20%,
+  HOLDOUT = last 20%. HOLDOUT is reserved and currently unused; nothing reads it.
+- **Known limitation, shown on every daily-tier tearsheet:** the universe is
+  today's index membership, so results carry survivorship bias.
 
-- ETFs: SPY QQQ IWM DIA TLT GLD XLF XLE XLK XLV XLY XLP XLI XLU
-- Pairs: KO PEP, XOM CVX, NVDA AMD, JPM BAC, V MA, HD LOW, GS MS, UPS FDX,
-  WMT TGT, MRK PFE
-- Singles: AAPL MSFT AMZN GOOGL META TSLA NFLX AVGO COST UNH JNJ PG DIS CSCO
-  INTC BA
-
-**Daily tier** — 1-day bars, 2016 to present, current S&P 500 constituents
-(save the list used to `data/sp500.csv`; check Alpaca's symbol format for
-share classes such as BRK.B). Plus four ETFs, SPY QQQ TLT GLD
-(`DAILY_ETFS`), added 2026-11-13 so the WO-03 fixtures run on this tier.
-
-Hygiene:
-- Store timestamps in UTC. Intraday: keep regular hours only, 09:30–16:00
-  America/New_York.
-- Forward-fill missing intraday bars with volume 0, max 5 consecutive bars,
-  never across sessions. Log the fill rate per symbol.
-- One file per symbol per tier: `data/1min/{SYM}.parquet`, `data/1day/{SYM}.parquet`.
-
-**Splits, chronological, per tier:** IS = first 60%, OOS = next 20%,
-HOLDOUT = last 20%. HOLDOUT is touched only by WO-09.
-
-**Known limitation to print on every daily-tier tearsheet:** the universe is
-today's index membership, so results carry survivorship bias.
+New symbols fetched later (WO-11) follow the same hygiene and the same splits.
 
 ## Strategy contract
 
@@ -120,7 +176,7 @@ Every generated strategy is one Python file exposing:
 
 ```python
 FREQUENCY = "1min"            # or "1day"
-UNIVERSE  = ["SPY", "QQQ"]    # subset of the tier
+UNIVERSE  = ["SPY", "QQQ"]
 PARAMS    = {"lookback": 30, "entry_z": 2.0}   # every tunable number lives here
 
 def generate_signals(bars: dict[str, pd.DataFrame], params: dict) -> pd.DataFrame:
@@ -134,140 +190,334 @@ def generate_signals(bars: dict[str, pd.DataFrame], params: dict) -> pd.DataFram
   the execution lag; strategies must not shift themselves forward.
 - Deterministic: no randomness without a fixed seed, no network, no file I/O,
   no wall-clock.
-- No magic numbers outside `PARAMS` (Eval 3 jitters `PARAMS`, nothing else).
+- No magic numbers outside `PARAMS`.
 
-`contract.py` validates all of the above before any strategy eval runs. A violation is
-a bug and goes to self-heal.
+WO-12 adds an optional third argument, `extra: dict[str, pd.DataFrame]`, for
+event datasets. Strategies that do not declare `EXTRA = [...]` are unaffected.
 
-## Backtest engine
+## Backtest engine and strategy evals
 
-- `executed = target.shift(1)` always.
-- Bar return per symbol = close-to-close, including the overnight gap.
-- `turnover_t = sum(|executed_t - executed_{t-1}|)`.
-- Cost at `c` bps round trip: `turnover_t * (c / 2) / 1e4`.
-- Aggregate net PnL to **daily** returns, then
-  `Sharpe = mean / std * sqrt(252)`. Same formula for both tiers.
-- Also report: annualised return, max drawdown, average daily turnover.
-
-## Strategy evals
-
-Proposed thresholds. They are config values in one file (`evals/config.py`);
-the owner may change them, agents may not.
+Implemented; `factory/engine.py` and `factory/evals/` are the reference.
+Thresholds are in `factory/evals/config.py`.
 
 | # | Eval | Data | Pass rule |
 |---|------|------|-----------|
-| 1 | Lookahead | IS | For 5 cut points (30/45/60/75/90% of IS), weights from the truncated run equal the full run's weights up to the cut, max abs diff <= 1e-9 (NaN == NaN). On failure raise `LookaheadBiasError` with the first offending timestamp and symbol. |
-| 2 | Friction | IS | Run at 0, 2, 5, 10 bps round trip. Pass if net Sharpe at 5 bps >= 0.5. Report break-even bps (linear interpolation where Sharpe crosses 0.5). |
-| 3 | Sensitivity | IS, 5 bps | Jitter each numeric param one at a time by ±10% and ±20% (ints rounded, minimum change 1; at most 4 params). Pass if the worst jittered Sharpe >= 50% of base Sharpe. |
-| 4 | Decay | IS vs OOS, 5 bps | Pass if OOS Sharpe > 0 and >= 50% of IS Sharpe, and no 5-consecutive-day window holds more than 60% of total PnL. |
-| 5 | Deflated Sharpe | OOS, 5 bps | Bailey & López de Prado (2014) DSR >= 0.95. |
+| 1 | Lookahead | IS | At 5 cut points, weights from the truncated run equal the full run's weights up to the cut (max abs diff <= 1e-9). |
+| 2 | Friction | IS | Net Sharpe at 5 bps round trip >= 0.5. Reports break-even bps. |
+| 3 | Sensitivity | IS, 5 bps | Worst Sharpe under ±10% / ±20% parameter jitter >= 50% of base. |
+| 4 | Decay | IS vs OOS, 5 bps | OOS Sharpe > 0 and >= 50% of IS; no 5-day window holds > 60% of PnL. |
+| 5 | Deflated Sharpe | OOS, 5 bps | Bailey & López de Prado DSR >= 0.95, N = variants that reached Eval 2. |
 
-Eval 5 detail (implement from the paper, do not trust this summary blindly):
+Status values: `VERIFIED` (all five), `FAILED_EVAL_n` (first failing eval;
+later evals are still run and recorded), `BUG_UNRESOLVED` (self-heal
+exhausted), `BLOCKED_DATA` (a data need could not be met).
 
-```
-SR0 = sqrt(V) * ((1 - g) * Zinv(1 - 1/N) + g * Zinv(1 - 1/(N*e)))
-DSR = Phi( (SR - SR0) * sqrt(T - 1) / sqrt(1 - skew*SR + ((kurt - 1)/4) * SR^2) )
-```
-
-`SR` is the per-day (not annualised) Sharpe, `T` the number of daily returns,
-`skew`/`kurt` of those returns (kurt non-excess), `g` the Euler–Mascheroni
-constant, `V` the variance of per-day Sharpes across trials, `N` the number of
-variants that reached Eval 2 in this factory run (jitters do not count,
-minimum 3). Sanity test: DSR must fall as N rises.
-
-Status values: `VERIFIED` (all five), `FAILED_EVAL_n` (first failing strategy eval;
-still run and record the later strategy evals for the tearsheet), `BUG_UNRESOLVED`
-(self-heal exhausted).
+Every result also carries `evals_passed` (0–5). Show it everywhere a status is
+shown, so near-misses are visible without touching a threshold.
 
 ## Agents
 
-- **Extractor** — PDF text (pymupdf) -> `StrategySpec` JSON (pydantic):
-  paper_id, title, category, hypothesis, universe, frequency, signal rules,
-  claimed metrics (Sharpe, sample period, costs assumed), `ambiguities`, and
-  `test_type`: `replication` if our data matches the paper's asset and
-  frequency, else `transfer`. That label is shown everywhere results are shown.
-- **Worker** x3 per paper, run in parallel, each sees the spec, the contract,
-  and IS data schema only:
-  - A — literal: the paper's rules and parameters as written
+- **Extractor** — PDF text (pymupdf) -> `StrategySpec`. Fills claimed metrics,
+  `ambiguities`, and `test_type`: `replication` if our data matches the paper's
+  asset and frequency, else `transfer`.
+- **Intake** — chat that turns an English description into a `StrategySpec`
+  with `test_type = "original"`. See WO-10.
+- **Worker** x3 per idea, in parallel; each sees the spec, the contract, and
+  the IS data schema only:
+  - A — literal: the rules and parameters as stated
   - B — conservative: same signal, inverse-volatility sizing, turnover damping
   - C — regime-filtered: same signal plus one volatility or trend filter
-- **Self-heal** — on bug-class failure, send the worker its code plus the exact
-  error (stack trace, or the lookahead timestamp/symbol). Max 3 attempts.
-- **Critic** — given claimed metrics and strategy eval telemetry, writes a short
-  post-mortem: what the paper omitted, where the strategy breaks. Appends one
-  entry to `wiki/graveyard.md`. Narrative only; it decides nothing.
+- **Self-heal** — on a bug-class failure, send the worker its code plus the
+  exact error (stack trace, or the lookahead timestamp and symbol). Max 3.
+- **Critic** — given claimed metrics and eval telemetry, writes a short
+  post-mortem and appends it to `wiki/graveyard.md`. Narrative only.
+- **Finder** — proposes public data sources for unmet data needs. See WO-14.
 
-Generated code runs through `sandbox.py`: separate subprocess, timeout (60s
-per run), working directory limited to a temp dir. This is crash isolation,
-not a security boundary; say so in the README.
+Generated code runs only through `factory/sandbox.py`. That is crash
+isolation, not a security boundary; the README says so.
 
-## Records and output
+## Records and events
 
-- SQLite `runs/factory.db`: `papers`, `variants`, `eval_results`
-  (one row per variant per strategy eval with metrics JSON), `heal_attempts`, `critiques`.
-- `runs/events.jsonl`: one line per state transition (extracted, variant
-  written, eval n pass/fail, heal attempt, critique). The CLI prints these
-  live; this is the demo's "assembly line" view.
-- `report/leaderboard.html`: one static, self-contained file generated from
-  SQLite. Columns: paper, variant, test type, claimed Sharpe, verified net
-  Sharpe (5 bps, OOS), break-even bps, status. Each row expands to a tearsheet:
-  equity curve at 0 vs 5 bps with the IS/OOS line, strategy eval table, critique.
+- SQLite `runs/factory.db`: `sources` (papers and described ideas), `runs`,
+  `variants`, `eval_results`, `heal_attempts`, `critiques`, `data_needs`.
+- `runs/events.jsonl`: one line per state change. Every event has this shape:
+
+```json
+{"seq": 17, "ts": "2026-11-14T06:20:03Z", "run_id": "r_ab12",
+ "stage": "eval", "variant": "B", "status": "failed",
+ "message": "Eval 2 failed: Sharpe 0.21 at 5 bps",
+ "data": {"eval": 2, "sharpe": 0.21, "break_even_bps": 1.4}}
+```
+
+`stage` is one of `intake extract data worker heal eval critic done`.
+`status` is one of `started passed failed info`. `variant` is `A`, `B`, `C`
+or null.
+
+## API contract
+
+FastAPI, JSON, served under `/api`. These shapes are fixed: the backend
+serves them and the interface consumes them. Change a shape only by editing
+this section first.
+
+| Method and path | Purpose | Returns |
+|-----------------|---------|---------|
+| `POST /api/runs` | Start a run. Multipart `pdf`, or JSON `{"spec_id": "..."}` | `{"run_id"}` |
+| `GET /api/runs/{run_id}/events` | Server-sent events, one event object per message, replays from `seq=0` | stream |
+| `GET /api/runs/{run_id}` | Run summary | `{"run_id","source","status","variants":[LeaderboardRow],"data_needs":[DataNeed]}` |
+| `GET /api/leaderboard` | All variants | `{"rows":[LeaderboardRow]}` |
+| `GET /api/variants/{variant_id}` | Tearsheet | `VariantDetail` |
+| `GET /api/graveyard` | Post-mortems | `{"markdown"}` |
+| `POST /api/intake` | One chat turn. `{"session_id"?, "message"}` | `IntakeReply` |
+| `GET /api/data/catalog` | Datasets on disk | `{"datasets":[Dataset]}` |
+| `POST /api/data/upload` | CSV of dated events, multipart, plus column mapping | `Dataset` |
+| `GET /api/providers` | Provider status | `{"providers":[{"name","connected","covers":[kind]}]}` |
+| `POST /api/providers/{name}/key` | Save a key server-side | `{"connected": true}` |
+| `POST /api/data/candidates/{id}/approve` | Approve a found source | `Dataset` |
+| `GET /api/evals/schema` | Every eval as data, with bounds and tooltips | `EvalSchema` |
+| `GET /api/evals/profiles/{name}` | One profile's thresholds | `EvalProfile` |
+| `PUT /api/evals/profiles/{name}` | Save a custom profile; rejected outside bounds | `EvalProfile` |
+
+```
+LeaderboardRow = {
+  "variant_id", "run_id", "source_id", "source_title",
+  "source_kind": "paper" | "described",
+  "variant": "A" | "B" | "C",
+  "test_type": "replication" | "transfer" | "original",
+  "frequency": "1min" | "1day",
+  "claimed_sharpe": number | null,
+  "verified_sharpe": number | null,      # OOS, net of 5 bps
+  "break_even_bps": number | null,
+  "evals_passed": 0..5,
+  "status": "VERIFIED" | "FAILED_EVAL_n" | "BUG_UNRESOLVED" | "BLOCKED_DATA" | "RUNNING",
+  "profile": string,                     # "default" until WO-16
+  "default_status": string,              # verdict under the default profile
+  "default_evals_passed": 0..5
+}
+
+VariantDetail = LeaderboardRow + {
+  "code": string, "params": object,
+  "evals": [{"n", "name", "passed", "metrics": object}],
+  "equity": {"dates": [date], "gross": [number], "net": [number],
+             "is_end": date, "oos_end": date},
+  "heal_attempts": [{"attempt", "error", "fixed": bool}],
+  "critique": string,
+  "notes": [string]          # e.g. survivorship bias, unverified source
+}
+
+DataNeed = {
+  "id", "kind": "price_bars" | "events", "name": string,
+  "symbols": [string], "frequency": string | null, "start": date, "end": date,
+  "status": "on_disk" | "fetching" | "fetched" | "needs_provider"
+            | "needs_upload" | "candidates" | "unavailable",
+  "provider": string | null,
+  "candidates": [{"id", "title", "url", "licence": string | null,
+                  "coverage": string, "availability_column": string}]
+}
+
+IntakeReply = {
+  "session_id", "reply": string, "questions": [string],
+  "spec": StrategySpec | null,        # non-null when ready to run
+  "spec_id": string | null,
+  "data_needs": [DataNeed]
+}
+
+Dataset = {"name", "kind", "symbols": [string], "frequency": string | null,
+           "start": date, "end": date, "rows": int,
+           "source": string, "verified": bool}
+
+EvalSchema = {"evals": [{
+  "n": 1..5, "name": string,
+  "question": string,                    # plain English, e.g. "Does it still
+                                         # make money after trading costs?"
+  "settings": [Knob],                    # changing one needs a re-run
+  "checks":   [Knob + {"metric": string, "op": ">=" | "<=" | ">"}]
+}]}
+
+Knob = {"key": string, "label": string, "default": number,
+        "min": number, "max": number, "locked": bool,
+        "tooltip": {"what_it_is": string, "if_raised": string,
+                    "if_lowered": string}}
+
+EvalProfile = {"name": string, "editable": bool,
+               "values": {key: number}, "stale": bool}
+```
+
+## Interface
+
+Lives in `web/`. If the owner's mock-up specifies a stack or layout, the
+mock-up wins. Otherwise use React + Vite + TypeScript. It talks to the API
+only, through one data-access module. Keep presentation separate from data
+and state, so applying the mock-up later is a restyle and not a rebuild.
+
+Screens:
+
+1. **New run** — two entry points side by side: upload a paper, or describe a
+   strategy in a chat box (follow-up questions appear inline).
+2. **Run** — the live assembly line. Stages left to right, three variant lanes,
+   each eval lighting up pass/fail as events arrive, self-heal attempts shown
+   in place with the error that triggered them. Data needs appear as a card
+   with one action each: fetching, connect a provider, upload, approve a
+   source, or blocked.
+3. **Leaderboard** — sortable; claimed Sharpe next to verified Sharpe,
+   break-even bps, evals passed n/5, status.
+4. **Tearsheet** — equity curve gross vs net with the IS/OOS boundary marked,
+   eval table with metrics, code, heal history, critique, notes.
+5. **Data** — catalog, provider connections, uploads.
+6. **Graveyard** — rendered post-mortems.
+7. **Rules** (WO-16) — every eval with its question, checks and thresholds.
+   Sliders limited to each knob's bounds; locked knobs shown but disabled;
+   the three-line tooltip on hover.
+
+UX rules:
+- Failure is the main content, not an error state. A failed strategy gets as
+  much design attention as a verified one.
+- `test_type` and `evals_passed` are visible wherever a result is.
+- Nothing is coloured or labelled as good unless its status is `VERIFIED`.
+- Notes such as survivorship bias and "unverified source" are always shown,
+  never behind a click.
+- Key fields are write-only: once saved, the interface shows "connected",
+  never the value.
+- When a custom eval profile is active, every result shows which profile
+  judged it and its default verdict next to the custom one.
 
 ## Work orders
 
-Do them in order. Commit after each. If acceptance still fails after two
-honest attempts, stop and report rather than loosening the criteria.
+Do them in the order given in "Order of work". Commit after each. If
+acceptance still fails after two honest attempts, stop and report; do not
+loosen the criteria. Each work order also gets a file in `work-orders/` with
+four headings: Summary, Acceptance Criteria, Out of Scope, Linked Spec
+Section. Regenerate `WO-08.md` onward from this file; older versions of
+WO-08 and WO-09 are superseded.
 
-**WO-01 Data.** `ingest_alpaca.py` for both tiers.
-Accept: all files present; a script prints rows, date range and fill rate per
-symbol; loading the 50-symbol intraday tier into wide frames is timed and
-logged; a known split (e.g. NVDA, June 2024) shows no price discontinuity.
+**WO-01 to WO-04 — done.**
 
-**WO-02 Contract and engine.** `contract.py`, `engine.py`, `sandbox.py`.
-Accept: unit tests for lag, cost arithmetic on a hand-computed 5-bar example,
-daily aggregation, and contract rejection of out-of-range weights.
-
-**WO-03 Evals 1 and 2.** Plus two fixture strategies in `tests/fixtures/`:
-`rigged.py` (uses `close.shift(-1)` and flips position every bar) and
-`clean.py` (volatility-scaled trend on SPY/QQQ/TLT/GLD, daily tier).
-Accept: rigged fails Eval 1 naming a timestamp and symbol; with the leak
-removed it fails Eval 2; clean passes Eval 1. Record what clean does on Eval 2
-honestly; do not tune it until it passes.
-
-**WO-04 Evals 3, 4, 5.**
-Accept: unit tests on synthetic return series with known answers (a constant
-positive drift passes Eval 4; a series whose PnL is one spike fails it; DSR
-decreases in N). Time one full five-eval pass on an intraday strategy and
-report it. **Checkpoint: this must be done before sleeping.**
-
-**WO-05 Extractor.**
-Accept: produces a valid `StrategySpec` for two papers in `papers/`, with a
-non-empty `ambiguities` list and a `test_type`.
+**WO-05 Extractor and LLM wrapper.** `factory/llm.py`, `agents/extractor.py`.
+Accept: a valid `StrategySpec` for two papers in `papers/`, each with
+`ambiguities` and a `test_type`; switching `EXTRACTOR_MODEL` between providers
+needs no code change.
 
 **WO-06 Workers and self-heal.**
 Accept: three variants generated in parallel for one paper; a deliberately
 injected lookahead bug is caught by Eval 1 and fixed within 3 attempts, with
 every attempt in `heal_attempts` and `events.jsonl`.
 
-**WO-07 Orchestrator, critic, records.** One command:
-`python -m factory.orchestrator papers/<file>.pdf`.
-Accept: end to end on one real paper, all rows written, critique appended to
-the graveyard. **Checkpoint: 11:00am Saturday.** If missed, drop to 2 workers
-and report Evals 3 and 5 as "not run".
+**WO-07 Orchestrator, critic, records.**
+`python -m factory.orchestrator papers/<file>.pdf` still works as a debug
+entry point.
+Accept: one real paper end to end; all tables written; events match the event
+shape above; critique appended to the graveyard. Report wall-clock time and
+model cost for the run. **Checkpoint: before sleeping Friday. Record a backup
+screen capture of this run as soon as it works.**
 
-**WO-08 Leaderboard and batch.** `report.py`; run 3–5 papers.
-Accept: `report/leaderboard.html` opens offline and shows every variant.
-**Checkpoint: 1:00pm Saturday, feature freeze.** After this: README, demo
-script, a recorded backup run. No new features.
+**WO-09 API.** `factory/api/` serving the runs, events, leaderboard, variants
+and graveyard rows of the API contract.
+Accept: each endpoint returns the documented shape, checked by tests; the
+event stream replays a finished run and follows a live one.
 
-**WO-09 (stretch) Synthesis.** One agent reads `wiki/graveyard.md` and the
-verified rows, proposes one hybrid strategy, which goes through the same five
-strategy evals and is then scored once on HOLDOUT. Only start if WO-08 is done by noon.
+**WO-08 Interface.** Screens 1–6 in `web/`, built directly on the live API.
+Use the owner's mock-up if it exists; otherwise build plain, working pages
+with minimal default styling and do not invent a visual design. Screens whose
+backend is not built yet (intake chat, data needs, providers) show a clear
+"not available yet" state and light up as later work orders land.
+Accept: uploading a paper in the interface starts a real run and the Run
+screen follows it live to completion; leaderboard and tearsheets show real
+records. **Checkpoint: noon Saturday.**
+
+**WO-15 Batch.** Run 3–5 papers from "Candidate papers" through the interface.
+Accept: every variant appears on the leaderboard with a tearsheet and a
+graveyard entry; total time and model cost are recorded in the work order.
+
+**WO-10 Describe a strategy.** `factory/intake.py`, `POST /api/intake`.
+`StrategySpec` gains `test_type = "original"`, `source_kind`, and allows empty
+`ambiguities` once follow-ups are answered. The agent asks at most 3
+follow-up questions, drawn from the ambiguities, then produces the spec.
+Claimed metrics are empty. It never invents a proxy for data it lacks.
+Accept: "buy SPY when it opens down more than 1% versus the prior close, sell
+at the close" yields a spec after follow-ups and runs end to end.
+
+**WO-16 Eval profiles and Rules screen.** `factory/evals/schema.py` describes
+each eval as data in the `EvalSchema` shape. Tooltips are plain English with
+no jargon. The built-in `default` profile mirrors `config.py` and cannot be
+edited. A custom profile may move a knob only within `[min, max]`; locked
+knobs cannot move. Bounds:
+
+| Knob | Default | Min | Max |
+|------|---------|-----|-----|
+| Lookahead tolerance | 1e-9 | locked | locked |
+| Minimum net Sharpe (Eval 2) | 0.5 | 0.3 | 1.5 |
+| Trading cost assumed, bps round trip (setting) | 5 | 1 | 20 |
+| Parameter robustness ratio (Eval 3) | 0.5 | 0.3 | 0.8 |
+| OOS / IS Sharpe ratio (Eval 4) | 0.5 | 0.3 | 0.9 |
+| OOS Sharpe above zero (Eval 4) | on | locked | locked |
+| Largest 5-day share of PnL (Eval 4) | 0.60 | 0.30 | 0.75 |
+| Minimum deflated Sharpe (Eval 5) | 0.95 | 0.90 | 0.99 |
+
+Threshold changes re-judge stored metrics without re-running backtests. A
+change to a setting marks the profile `stale` until affected variants are
+re-run. Every result records the profile that judged it, and the API returns
+the default verdict alongside. Add the three `/api/evals` endpoints and the
+Rules screen. This is the one sanctioned change to `factory/evals/`; default
+values still may not be altered.
+Accept: a PUT outside bounds or on a locked knob is rejected; lowering minimum
+net Sharpe to 0.45 flips the clean fixture's Eval 2 verdict under the custom
+profile while its default verdict stays FAIL; the Rules screen shows all five
+evals with working sliders and tooltips.
+
+**WO-11 Data needs check.** `factory/data_needs.py`. `StrategySpec` gains
+`data_requirements`. `data/catalog.json` lists every dataset on disk. The
+resolver gives each requirement a `DataNeed.status`. Price-bar gaps that
+Alpaca covers are fetched with the existing ingest code, then the run
+continues. Anything else pauses the run with the need shown; if it cannot be
+met the run ends `BLOCKED_DATA`. Every resolution is an event with
+`stage = "data"`.
+Accept: a described strategy on a ticker outside the 50 triggers a fetch and
+then runs end to end; a strategy needing non-price data pauses with the
+missing dataset named.
+
+**WO-12 Event data.** `data/events/{name}.parquet` with required columns
+`available_at` (UTC) and `symbol`, plus free fields. The contract gains
+`EXTRA = [names]` and the `extra` argument. The engine and Eval 1 truncate
+every extra dataset on `available_at` at the same cut as the bars.
+`POST /api/data/upload` maps CSV columns and rejects a file with no
+availability date. Uploaded data is parsed as data only, size-capped, never
+executed.
+Accept: a strategy using an uploaded event file runs end to end; a rigged
+variant that reads rows dated after the current bar fails Eval 1.
+
+**WO-13 Providers.** `providers/base.py` with `covers(need)` and
+`fetch(need)`. Alpaca first; add Databento for price bars (its bars are
+unadjusted, so mark such data in `notes` unless adjustment factors are
+applied). `POST /api/providers/{name}/key` writes to `runs/secrets.env`,
+gitignored, mode 600.
+Accept: with no Databento key a need shows `needs_provider`; after adding the
+key the same need fetches and the run continues. A test greps the database,
+`events.jsonl`, logs and captured prompts for the key value and finds nothing.
+
+**WO-14 Open-data finder.** For needs no provider covers, the Finder agent
+uses its model provider's web search tool to return up to 3 candidates (URL,
+licence if stated, coverage, which column is the availability date). If no
+search tool is available it returns none and says so. Nothing is downloaded
+before `POST /api/data/candidates/{id}/approve`. Approved data goes through
+WO-12's path with `verified = false` and the note "unverified source" on
+every tearsheet that used it.
+Accept: a congressional-trades strategy yields candidates; approving one
+ingests it and the strategy runs with trades keyed on disclosure date, not
+trade date.
+
+## Checkpoints
+
+| When | What must be true | If not |
+|------|-------------------|--------|
+| Fri, before sleep | WO-07: one paper end to end, backup recorded | Nothing else matters until it is |
+| Sat 10:00am | WO-09 API serving real data | Skip extras; interface gets all remaining time |
+| Sat noon | WO-08: interface live on the API | Demo with whatever screens work plus the debug CLI |
+| Sat 1:00pm | Feature freeze | Unmerged branches stay unmerged |
+| Sat 1:00–3:30pm | WO-15 batch done, README, demo script, second backup recording | |
 
 ## Candidate papers
 
-Owner supplies the PDFs. Claimed numbers below are from abstracts; the
-extractor must re-read them from the PDF.
+Owner supplies the PDFs. Claimed numbers are from abstracts; the extractor
+must re-read them from the PDF.
 
 | Paper | Tier | Type | Claim |
 |-------|------|------|-------|
@@ -277,20 +527,15 @@ extractor must re-read them from the PDF.
 | Avellaneda & Lee (2010) — Statistical Arbitrage in the US Equities Market | daily | replication, later sample | Sharpe 1.44 for PCA strategies, 1997–2007 |
 | de Groot, Huij, Zhou — Another Look at Trading Costs and Short-Term Reversal Profits | daily | replication, later sample | 30–50 bps per week net, large caps |
 
-## Software Factory breadcrumbs
-
-Copy each work order above into `work-orders/WO-0n.md` with four headings:
-Summary, Acceptance Criteria, Out of Scope, Linked Spec Section. Keep the strategy eval
-table and contract as the "blueprint" they link to. This lets the repo be
-indexed and the work orders imported into 8090 Software Factory later without
-rewriting.
-
 ## Demo (what the build must make possible)
 
-1. Run one paper live; the event log shows extract -> 3 variants.
-2. A variant trips Eval 1; the log names the timestamp; the worker fixes it.
-3. The fixed variant dies at Eval 2; break-even cost is shown next to the
-   paper's claimed Sharpe.
-4. Open the leaderboard: claimed vs verified across all papers.
-5. One line on what survived, if anything, and the graveyard entry for what
-   did not.
+1. Upload a paper; the Run screen shows extraction, then three variants.
+2. A variant trips Eval 1; the screen names the timestamp; the worker fixes it.
+3. The fixed variant dies at Eval 2; break-even cost sits next to the paper's
+   claimed Sharpe.
+4. Leaderboard: claimed vs verified across all papers.
+5. Type a strategy in English; answer a follow-up; watch it get tested.
+6. If WO-16 landed: open Rules, hover a threshold to read what it means, move
+   a slider within its bounds and watch verdicts change next to the defaults.
+7. If WO-11 to WO-14 landed: ask for a strategy that needs data the system
+   lacks, and show it fetch, ask for a key, or find and propose a source.
