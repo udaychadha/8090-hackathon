@@ -25,18 +25,31 @@ from factory.trials import trial_cohort
 SURVIVORSHIP = "Daily universe uses current index membership; results carry survivorship bias."
 
 
-def run_spec(spec, *, data_root="data", output_root=".", run_id=None):
+def run_spec(spec, *, data_root="data", output_root=".", run_id=None, retained_run_id=None):
     """Run a frozen, owner-supplied original specification through the same arena."""
     payload = spec.model_dump() if isinstance(spec, StrategySpec) else spec
     validated = StrategySpec.model_validate(payload)
     if validated.source_kind != "described" or validated.test_type != "original":
         raise ValueError("Handwritten specifications must be described/original")
     return run_paper(
-        None, data_root=data_root, output_root=output_root, run_id=run_id, supplied_spec=validated
+        None,
+        data_root=data_root,
+        output_root=output_root,
+        run_id=run_id,
+        supplied_spec=validated,
+        retained_run_id=retained_run_id,
     )
 
 
-def run_paper(paper, *, data_root="data", output_root=".", run_id=None, supplied_spec=None):
+def run_paper(
+    paper,
+    *,
+    data_root="data",
+    output_root=".",
+    run_id=None,
+    supplied_spec=None,
+    retained_run_id=None,
+):
     started = time.perf_counter()
     root = Path(output_root)
     run_id = run_id or ("r_" + uuid.uuid4().hex[:12])
@@ -162,10 +175,39 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None, supplied
         schema = worker_context(
             is_bars, spec.frequency, **({"extra": extra} if extra is not None else {})
         )
+        retained = None
+        if retained_run_id is not None:
+            previous = records.get("runs", retained_run_id, include_voided=True)
+            candidates = records.list("variants", run_id=retained_run_id, include_voided=True)
+            if (
+                not previous
+                or previous["status"] != "VOID"
+                or (previous.get("source") or {}).get("spec") != spec.model_dump()
+                or {item["variant"] for item in candidates} != set(VARIANTS)
+                or any(
+                    item.get("reached_eval_2") or item.get("evals") or not item.get("code")
+                    for item in candidates
+                )
+            ):
+                raise ValueError(
+                    "Reuse requires identical spec and void candidates with no eval results"
+                )
+            retained = {item["variant"]: (item["code"], None) for item in candidates}
         for variant in VARIANTS:
             rows[variant] = _save_row(records, _row(spec, run_id, variant))
-            records.event(run_id, "worker", "started", "Generating strategy", variant=variant)
-        proposals = propose_parallel(spec, schema)
+            if retained is not None:
+                rows[variant]["notes"].append(
+                    f"Candidate retained from invalidated harness attempt {retained_run_id}; "
+                    "no new generation or prior performance results."
+                )
+            records.event(
+                run_id,
+                "worker",
+                "started",
+                "Loading retained candidate" if retained is not None else "Generating strategy",
+                variant=variant,
+            )
+        proposals = retained if retained is not None else propose_parallel(spec, schema)
         # All three model proposals are concurrent. Validation remains deterministic.
         for variant, proposal in proposals.items():
             row = rows[variant]
@@ -180,9 +222,16 @@ def run_paper(paper, *, data_root="data", output_root=".", run_id=None, supplied
                     )
                     continue
                 code, usage = proposal
-                usages.append(usage_record(usage))
+                if usage is not None:
+                    usages.append(usage_record(usage))
                 path = root / "strategies" / spec.paper_id / run_id / f"{variant}.py"
-                records.event(run_id, "worker", "passed", "Candidate generated", variant=variant)
+                records.event(
+                    run_id,
+                    "worker",
+                    "passed",
+                    "Retained candidate loaded" if retained is not None else "Candidate generated",
+                    variant=variant,
+                )
                 try:
                     definition, heals = validate_and_heal(
                         spec,

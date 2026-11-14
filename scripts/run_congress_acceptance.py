@@ -127,6 +127,7 @@ def generate_signals(bars, params):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("experiment", choices=["congress_all", "congress_committee", "control"])
+    parser.add_argument("--reuse-invalidated-run", default=None)
     args = parser.parse_args()
     load_dotenv(".env", override=False)
     load_dotenv("runs/secrets.env", override=False)
@@ -147,12 +148,13 @@ def main():
         previous[args.experiment] = {"run_id": run_id, "status": "RUNNING", "spec_sha256": digest}
         save_state(previous)
         print(json.dumps(previous[args.experiment]), flush=True)
-        result = run_spec(spec, run_id=run_id)
+        result = run_spec(spec, run_id=run_id, retained_run_id=args.reuse_invalidated_run)
     summary = {
         key: result.get(key)
         for key in ("run_id", "status", "wall_seconds", "estimated_model_cost_usd", "cost_complete")
     }
     summary["spec_sha256"] = digest
+    summary["retained_from"] = args.reuse_invalidated_run
     summary["variants"] = [
         {
             key: row.get(key)

@@ -204,6 +204,11 @@ transaction date. Both normal execution and Eval 1 apply the availability gate.
 Daily bar labels are midnight session labels, not decision timestamps; event
 decisions use the completed session's close. Intraday decisions use bar end.
 No change to eval thresholds is authorized by this extension.
+An invalidated harness attempt may reuse its exact three retained candidates
+only when the spec is identical and no candidate reached a performance eval or
+has a recorded eval result. This records explicit reuse provenance, charges no
+new generation call, and still performs normal validation and bounded bug repair.
+Measured strategies cannot use this recovery path.
 Event-only execution preserves typed empty symbol slices for stocks not yet
 observed in a partition or Eval 1 prefix; targets must be zero before their first
 quote. All declared symbols remain in the universe, and no prices are filled.
@@ -242,11 +247,13 @@ evals, with no performance-driven revision:
 The committee mapping is fixed: Armed Services -> Aerospace & Defense
 **industry**; Energy and Natural Resources / Energy and Commerce -> Energy;
 Financial Services / Banking -> Financials; HELP / Energy and Commerce's
-Health subcommittee -> Health Care; Commerce/Science/Transportation ->
+health jurisdiction -> Health Care; Commerce/Science/Transportation ->
 Communication Services and Information Technology. Use GICS from `data/sp500.csv`
 (its `GICS Sub-Industry` identifies Aerospace & Defense). Do not broaden mappings
 or extend roster periods after seeing outcomes. Snapshot-only evidence establishes
 membership on its snapshot date, not an entire congressional term.
+Energy and Commerce's parent membership qualifies for both its mapped sectors;
+the owner's health annotation does not add a Health-subcommittee requirement.
 
 Report both specs' statuses, evals passed and Sharpe at every configured cost
 level beside an explicitly marked buy-and-hold SPY control on the same stored
@@ -581,12 +588,13 @@ multiple of IS Sharpe and independently requires both Sharpes to be positive.
 An OOS/IS ratio with nonpositive IS is not applicable. Eval 5's displayed rules
 state the global, non-void, non-control cohort and the unchanged trial-count floor.
 Only the default profile is readable. English intake, saved-spec start,
-event upload, provider-key writes, source approval and custom profiles are not
+provider-key writes, source approval and custom profiles are not
 implemented in this work: their controls stay disabled with "not available yet"
 and their write endpoints return 501 with that detail. Provider presence may be
 reported from configured environment-variable presence only, without a key or
 an invented connectivity test. The interface does not change settings or eval logic;
 the owner-sanctioned correction above is a separately audited backend revision.
+WO-12 activates event upload under the explicit extension below.
 
 ## Interface
 

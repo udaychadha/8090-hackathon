@@ -1,0 +1,79 @@
+{
+  "checks": [
+    "desktop dark data: no page overflow",
+    "desktop light data: no page overflow",
+    "desktop: real bounded event table; no price chart; unverified source and sealed holdout labels; upload required fields and name pattern",
+    "desktop dark control tearsheet: no page overflow",
+    "desktop light control tearsheet: no page overflow",
+    "desktop active Congress run: no page overflow",
+    "desktop new run: no page overflow",
+    "mobile dark data: no page overflow",
+    "mobile light data: no page overflow",
+    "mobile: real bounded event table; no price chart; unverified source and sealed holdout labels; upload required fields and name pattern",
+    "mobile dark control tearsheet: no page overflow",
+    "mobile light control tearsheet: no page overflow",
+    "mobile active Congress run: no page overflow",
+    "mobile new run: no page overflow"
+  ],
+  "findings": [],
+  "screenshots": [
+    "report/wo12-ui/desktop-dark-data-overview.png",
+    "report/wo12-ui/desktop-dark-event-preview.png",
+    "report/wo12-ui/desktop-dark-event-rows.png",
+    "report/wo12-ui/desktop-dark-upload-form.png",
+    "report/wo12-ui/desktop-light-data-overview.png",
+    "report/wo12-ui/desktop-light-event-preview.png",
+    "report/wo12-ui/desktop-light-event-rows.png",
+    "report/wo12-ui/desktop-light-upload-form.png",
+    "report/wo12-ui/desktop-dark-control-tearsheet.png",
+    "report/wo12-ui/desktop-light-control-tearsheet.png",
+    "report/wo12-ui/desktop-live-congress-run.png",
+    "report/wo12-ui/desktop-new-run.png",
+    "report/wo12-ui/mobile-dark-data-overview.png",
+    "report/wo12-ui/mobile-dark-event-preview.png",
+    "report/wo12-ui/mobile-dark-event-rows.png",
+    "report/wo12-ui/mobile-dark-upload-form.png",
+    "report/wo12-ui/mobile-light-data-overview.png",
+    "report/wo12-ui/mobile-light-event-preview.png",
+    "report/wo12-ui/mobile-light-event-rows.png",
+    "report/wo12-ui/mobile-light-upload-form.png",
+    "report/wo12-ui/mobile-dark-control-tearsheet.png",
+    "report/wo12-ui/mobile-light-control-tearsheet.png",
+    "report/wo12-ui/mobile-live-congress-run.png",
+    "report/wo12-ui/mobile-new-run.png"
+  ],
+  "errors": [],
+  "writes": [],
+  "dataset": {
+    "id": "main-events-congress_trades",
+    "preview_rows": 500,
+    "holdout_start": "2024-09-10T04:00:00+00:00",
+    "first_available_at": "2015-01-21T14:30:00+00:00",
+    "last_available_at": "2024-09-09T13:30:00+00:00"
+  },
+  "desktop_event_table_layout": {
+    "height": 300,
+    "scrollHeight": 36441,
+    "maxHeight": "300px",
+    "pageHeight": 2698
+  },
+  "control": {
+    "variant_id": "r_75d07564e86a_A",
+    "status": "FAILED_EVAL_5",
+    "evals_passed": 4,
+    "notes": [
+      "Daily universe uses current index membership; results carry survivorship bias.",
+      "Buy-and-hold control; excluded from Eval 5 trial accounting."
+    ]
+  },
+  "active_run": {
+    "run_id": "r_587be5f49c30",
+    "status": "RUNNING"
+  },
+  "mobile_event_table_layout": {
+    "height": 300,
+    "scrollHeight": 36441,
+    "maxHeight": "300px",
+    "pageHeight": 4261
+  }
+}

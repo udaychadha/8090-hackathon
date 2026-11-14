@@ -28,3 +28,10 @@ def test_sample_gate_counts_only_fixed_qualifying_purchases_and_calendar_years()
     assert committee_sample_gate(dates)["verification_eligible"]
     assert not committee_sample_gate(dates[:-1])["verification_eligible"]
     assert not committee_sample_gate(["2020-01-02"] * 199 + ["2023-01-01"])["verification_eligible"]
+
+
+def test_owner_mapping_keeps_both_energy_and_commerce_jurisdictions():
+    from scripts.audit_committee_rosters import COMMITTEES
+
+    assert COMMITTEES["ENERGY AND COMMERCE"][2] == ["Energy", "Health Care"]
+    assert COMMITTEES["ARMED SERVICES"][1:] == ("GICS Sub-Industry", ["Aerospace & Defense"])

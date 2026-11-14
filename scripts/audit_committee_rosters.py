@@ -19,6 +19,8 @@ from pathlib import Path
 
 import pymupdf
 
+from factory.congress import committee_sample_gate
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data/source/committee"
 SOURCES = [
@@ -53,7 +55,9 @@ SOURCES = [
 
 COMMITTEES = {
     "ARMED SERVICES": ("Armed Services", "GICS Sub-Industry", ["Aerospace & Defense"]),
-    "ENERGY AND COMMERCE": ("Energy and Commerce", "GICS Sector", ["Energy"]),
+    # The owner's '(health)' identifies this parent committee's jurisdiction;
+    # it does not impose an additional subcommittee-membership requirement.
+    "ENERGY AND COMMERCE": ("Energy and Commerce", "GICS Sector", ["Energy", "Health Care"]),
     "FINANCIAL SERVICES": ("Financial Services", "GICS Sector", ["Financials"]),
     "BANKING, HOUSING, AND URBAN AFFAIRS": (
         "Banking, Housing, and Urban Affairs",
@@ -215,11 +219,7 @@ def audit(manifest: list[dict], members: list[dict]) -> dict:
         json.dumps(qualifying, indent=2, ensure_ascii=False) + "\n"
     )
     dates = sorted(r["transaction_date"] for r in qualifying)
-    short_sample = (
-        len(qualifying) < 200
-        or not dates
-        or (datetime.fromisoformat(dates[-1]) - datetime.fromisoformat(dates[0])).days < 1095
-    )
+    short_sample = not committee_sample_gate(dates)["verification_eligible"]
     report = {
         "created_at": datetime.now(UTC).isoformat(),
         "sources": manifest,
@@ -257,8 +257,8 @@ def audit(manifest: list[dict], members: list[dict]) -> dict:
             "GICS sector/sub-industry classifications come from the current static "
             "data/sp500.csv, not historical classifications.",
             "Seven snapshot days only; no inference over congressional terms or between snapshots.",
-            "The 2021-02-01 House publication contains no Health subcommittee roster; "
-            "no Health membership inferred from full Energy and Commerce membership.",
+            "The fixed owner mapping assigns both Energy and Health Care to full Energy "
+            "and Commerce membership; no extra Health-subcommittee condition is imposed.",
             "Strict matching can exclude genuine aliases; unmatched rows remain excluded "
             "and are retained for review.",
             "PDF metadata and production timestamps do not establish public availability.",

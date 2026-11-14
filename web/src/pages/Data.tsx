@@ -254,8 +254,28 @@ function Catalog({ scope, audit }: { scope: Scope; audit: boolean }) {
                               {dataset.name}
                             </button>
                             <p className="caption">
-                              {dataset.symbols.join(", ")}
+                              {dataset.symbols.slice(0, 5).join(", ")}
+                              {dataset.symbols.length > 5 &&
+                                ` · +${(dataset.symbols.length - 5).toLocaleString()} more`}
                             </p>
+                            {dataset.symbols.length > 5 && (
+                              <details>
+                                <summary>
+                                  All {dataset.symbols.length.toLocaleString()}{" "}
+                                  symbols
+                                </summary>
+                                <div
+                                  className="event-symbols"
+                                  role="region"
+                                  aria-label={`${dataset.name} symbols`}
+                                  tabIndex={0}
+                                >
+                                  <p className="caption">
+                                    {dataset.symbols.join(", ")}
+                                  </p>
+                                </div>
+                              </details>
+                            )}
                             <Notes
                               notes={dataset.notes.filter(
                                 (note) => !sharedNotes.includes(note),
@@ -546,13 +566,20 @@ function DatasetPanel({
         preview.data && (
           <>
             {dataset.kind === "events" ? (
-              <div className="table-wrap">
+              <div
+                className="table-wrap event-preview-rows"
+                role="region"
+                aria-label={`${dataset.name} event observations`}
+                tabIndex={0}
+              >
                 {preview.data.rows.length ? (
                   <table>
                     <thead>
                       <tr>
                         {Object.keys(preview.data.rows[0]).map((key) => (
-                          <th key={key}>{key}</th>
+                          <th scope="col" key={key}>
+                            {key}
+                          </th>
                         ))}
                       </tr>
                     </thead>

@@ -1069,6 +1069,19 @@ dialog.chart-dialog::backdrop {
 .dataset-table td {
   font-size: var(--caption);
 }
+.event-preview-rows,
+.event-symbols {
+  max-height: var(--chart-data-height);
+  overflow: auto;
+}
+.event-preview-rows th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+.event-symbols {
+  overflow-wrap: anywhere;
+}
 .dataset-preview {
   position: sticky;
   top: var(--s4);
