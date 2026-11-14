@@ -13,6 +13,9 @@ import pandas as pd
 StrategyRunner = Callable[[dict[str, pd.DataFrame], dict | None], pd.DataFrame]
 
 
+STD_FLOOR = 1e-12  # numerical guard, not a pass threshold
+
+
 class EvalError(RuntimeError):
     """The harness (not the strategy) could not evaluate. Never a pass."""
 
@@ -33,7 +36,8 @@ def daily_sharpe(daily: pd.Series) -> float | None:
     if len(daily) < 2:
         return None
     std = float(daily.std(ddof=1))
-    return float(daily.mean() / std) if std > 0 else None
+    # A constant series has a rounding-noise std (~1e-19), not exactly zero.
+    return float(daily.mean() / std) if std > STD_FLOOR else None
 
 
 def annualised_sharpe(daily: pd.Series) -> float | None:

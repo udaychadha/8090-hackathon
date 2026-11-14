@@ -213,3 +213,20 @@ def daily_from_intraday(bars: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame
         daily.index = daily.index.tz_convert("UTC").rename("timestamp")
         result[symbol] = normalize_bars(daily)
     return result
+
+
+def daily_splits_from_intraday(
+    root: Path | str, symbols: list[str]
+) -> tuple[dict[str, pd.DataFrame], dict[str, pd.DataFrame]]:
+    """(IS, OOS) daily bars for intraday-tier symbols. HOLDOUT is not loaded.
+
+    The intraday split falls mid-session, so that session would appear,
+    partially, on both sides. It is dropped from both.
+    """
+    in_sample = daily_from_intraday(load_bars(root, "1min", symbols, split="IS"))
+    out_sample = daily_from_intraday(load_bars(root, "1min", symbols, split="OOS"))
+    for symbol in symbols:
+        shared = in_sample[symbol].index.intersection(out_sample[symbol].index)
+        in_sample[symbol] = in_sample[symbol].drop(shared)
+        out_sample[symbol] = out_sample[symbol].drop(shared)
+    return in_sample, out_sample

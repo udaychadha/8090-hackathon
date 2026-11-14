@@ -61,7 +61,8 @@ def performance_metrics(
     count = len(daily)
     std = float(daily.std(ddof=1)) if count > 1 else 0.0
     # Undefined Sharpe is explicit, never silently presented as a pass or infinity.
-    sharpe = float(daily.mean() / std * math.sqrt(252)) if std > 0 else None
+    # 1e-12 guard: a constant series has rounding-noise std, which is not a Sharpe.
+    sharpe = float(daily.mean() / std * math.sqrt(252)) if std > 1e-12 else None
     equity = (1 + daily).cumprod()
     total = float(equity.iloc[-1] - 1)
     if (daily == -1).any():
