@@ -1,48 +1,73 @@
-# Track A execution notes
+# Paper pipeline execution notes
 
-These modules implement WO-05 through WO-07. Live acceptance is **pending**:
-no research PDFs or role model settings were present during implementation.
-Offline fixtures and mocked model responses are not a real-paper run.
+WO-05 through WO-07 have a real-provider pipeline run recorded in
+[WO-07](../../work-orders/WO-07.md). It completed, but all three generated
+strategies were inactive because they assumed incompatible clock labels.
+That is a pipeline acceptance result, not economic validation of the paper.
 
-Required environment dependencies: `pymupdf`, `openai`, `anthropic` in addition
-to the existing project dependencies. They have not been installed or added to
-the root project manifest because those paths are outside Track A ownership.
+Install the project and runtime dependencies with `pip install -e '.[dev]'`.
+The manifest includes PyMuPDF and both provider SDKs; `requirements.lock`
+captures the validated environment. Default `pytest` includes the agent tests.
 
 Set `EXTRACTOR_MODEL`, `WORKER_MODEL`, and `CRITIC_MODEL` to
-`openai:<model-id>` or `anthropic:<model-id>` and supply the matching provider
-key through the environment. No model ID is hardcoded. For estimated dollar
-costs, supply each role's `<ROLE>_INPUT_USD_PER_MTOK` and
-`<ROLE>_OUTPUT_USD_PER_MTOK`. Missing prices or cached usage yield unknown cost,
-not zero. Token counts and model identity are retained. Confirm against provider
-billing for actual charges.
+`openai:<model-id>` or `anthropic:<model-id>` and export the matching API key.
+The debug CLIs load `.env` without overriding exported settings. Model IDs
+are configuration, never selected by source code.
 
-Owner-supplied research PDFs belong in `papers/`. WO-05 requires two extracted
-papers; WO-07 requires only one real paper end to end. No papers are downloaded.
+For estimated dollar costs, set each role's `<ROLE>_INPUT_USD_PER_MTOK` and
+`<ROLE>_OUTPUT_USD_PER_MTOK`. Optional `CACHE_READ`, `CACHE_WRITE`, and
+`CACHE_WRITE_LONG` rates price the corresponding reported input-token counts.
+Default cache writes mean 30 minutes for OpenAI and 5 minutes for Anthropic;
+long writes mean 12 hours and 1 hour respectively. Missing applicable rates
+produce unknown cost, never zero. Token categories and model identity are
+retained. Use provider billing for actual charges, including account discounts.
 
-Run one paper from the repository root:
+Keep owner-approved PDFs in `papers/`. Intake verifies an existing Markdown
+cache against the PDF and Markdown SHA-256 fingerprints in `.spec.json`, or
+creates a page-labelled full-text Markdown copy on first use. Source URL,
+authors, version, and verification metadata are preserved. Changed fingerprints
+stop extraction for review; they never silently inherit old provenance.
+PDFs, Markdown copies and source/spec sidecars stay local and are gitignored.
+Equations and tables may need reference to the original PDF.
 
-```
+```sh
+# Prepare or verify Markdown without calling a model.
+.venv/bin/python -m factory.agents.extractor papers/<file>.pdf --prepare-only
+# Extract and validate a spec; retain it with source provenance.
+.venv/bin/python -m factory.agents.extractor papers/<file>.pdf
+# Execute one full paper pipeline.
 .venv/bin/python -m factory.orchestrator papers/<file>.pdf
+# All offline checks.
+.venv/bin/python -m pytest -q
+.venv/bin/ruff check factory tests
+.venv/bin/ruff format --check factory tests
 ```
 
-The CLI writes records and events under `runs/`, generated strategies under
-`strategies/<source>/<run>/`, and postmortems to `wiki/graveyard.md`. It never
-reads HOLDOUT. Only the existing deterministic harness reads OOS.
+Records and events live under `runs/`, generated strategies under
+`strategies/<source>/<run>/`, and postmortems in `wiki/graveyard.md`.
+Only the trusted harness reads OOS; HOLDOUT is never loaded. Workers get
+IS column/dtype information and explicit timestamp/execution conventions.
+Self-heal permits at most three IS bug repairs and receives no metric failures.
 
-Run all tests explicitly, since root pytest configuration defaults to `tests/`:
+A provider failure before Eval 2 fails the run operationally without altering
+valid sibling results. Missing trial statistics after evaluation begins still
+fail Eval 5 closed. Chart-recording failures preserve valid trial statistics
+while marking the run operationally failed. Prior completed repair usage is
+retained if a later repair call fails; total cost remains unknown when a failed
+provider call's billing cannot be determined.
 
-```
-.venv/bin/python -m pytest tests factory/agents -q
-.venv/bin/ruff check factory/llm.py factory/orchestrator.py factory/agents
-```
+Variant records contain daily gross/net equity, date boundaries and exact UTC
+split timestamps. The recording adapter observes the harness's base strategy
+executions and checks its reconstructed OOS returns against evaluated returns.
+It does not rerun generated strategies. Both IS and OOS start flat, matching
+the reference engine. Intraday slices sharing a day compound into one curve
+point. Activity counts identify inactive portfolios without changing verdicts.
+No eval code or thresholds were modified.
 
-Self-heal permits three bug repairs, uses IS only, and never receives metric
-failures. A real sandbox/Eval 1 test injects lookahead and repairs it using a
-mocked model response. The integration test uses stubbed paper extraction and
-eval telemetry: it verifies plumbing, **not** real-paper acceptance.
+Configured credentials are filtered before provider prompts, generated code,
+records, events, CLI output and complete graveyard entries. Regression tests
+exercise both real SDKs with offline HTTP transports and fake credentials.
+The wrapper still requires the real key for the provider authentication header.
 
-The current implementation stops at WO-07. It does not expose the WO-09 HTTP
-API. The SQLite record payloads are internal; the later API must map them to the
-fixed public contract. Operational provider/harness failures fail the run.
-Unavailable trial accounting forces Eval 5 to fail closed rather than silently
-under-counting candidate trials. No eval implementation or threshold was changed.
+The implementation stops at WO-07. The later API must map these internal
+records into the public contract; no HTTP product API or app UI is included.

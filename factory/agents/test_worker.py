@@ -4,6 +4,7 @@ import json
 import threading
 
 import pandas as pd
+import pytest
 
 from factory.agents import worker
 from factory.agents.records import Records
@@ -86,4 +87,34 @@ def test_repair_limit(tmp_path, monkeypatch):
     )
     assert definition is None and len(usage) == 3
     assert records.db.execute("SELECT COUNT(*) FROM heal_attempts").fetchone()[0] == 3
+    records.close()
+
+
+def test_failed_repair_records_failure_and_prior_usage(tmp_path, monkeypatch):
+    completed = Completion("bad", "test", 10, 5, 0.01, 0.001)
+    calls = 0
+
+    def repair(*args):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return completed
+        raise RuntimeError("provider error text must stay private")
+
+    monkeypatch.setattr(worker, "complete", repair)
+    records = Records(tmp_path / "runs")
+    with pytest.raises(worker.RepairFailure) as caught:
+        worker.validate_and_heal(spec(), "A", "bad", bars(), tmp_path / "A.py", records, "r")
+    assert caught.value.usages == [completed]
+    rows = [
+        json.loads(row[0])
+        for row in records.db.execute("SELECT payload FROM heal_attempts ORDER BY id")
+    ]
+    assert len(rows) == 2 and all(not row["fixed"] for row in rows)
+    assert rows[1]["result_error"] == "Repair provider failed"
+    events = [
+        json.loads(line) for line in (tmp_path / "runs/events.jsonl").read_text().splitlines()
+    ]
+    assert events[-1]["stage"] == "heal" and events[-1]["status"] == "failed"
+    assert "provider error text" not in str(rows) + str(events)
     records.close()

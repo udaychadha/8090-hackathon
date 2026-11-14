@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import fcntl
 import json
-import os
 import sqlite3
 import threading
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+
+from factory.redaction import redact
 
 TABLES = {"sources", "runs", "variants", "eval_results", "heal_attempts", "critiques", "data_needs"}
 STAGES = {"intake", "extract", "data", "worker", "heal", "eval", "critic", "done"}
@@ -35,24 +36,7 @@ class Records:
         self._mirror()
 
     def safe(self, value):
-        secrets = [
-            secret
-            for name, secret in os.environ.items()
-            if secret and ("KEY" in name or "TOKEN" in name or "SECRET" in name)
-        ]
-
-        def scrub(item):
-            if isinstance(item, str):
-                for secret in secrets:
-                    item = item.replace(secret, "[REDACTED]")
-                return item
-            if isinstance(item, dict):
-                return {scrub(str(key)): scrub(val) for key, val in item.items()}
-            if isinstance(item, list):
-                return [scrub(val) for val in item]
-            return item
-
-        return scrub(json.loads(json.dumps(value, allow_nan=False, default=str)))
+        return redact(value)
 
     def put(self, table, identifier, run_id, payload):
         if table not in TABLES:

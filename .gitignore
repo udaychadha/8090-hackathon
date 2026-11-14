@@ -19,3 +19,5 @@ strategies/*
 !strategies/.gitkeep
 papers/*.pdf
 papers/*.json
+papers/*.md
+papers/*.tmp

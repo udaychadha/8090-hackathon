@@ -33,8 +33,10 @@ cp .env.example .env
 
 Set `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` in `.env`. Environment variables
 take precedence. Keys, data, generated strategies, and run output are ignored
-by Git. Later agent work will read `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`;
-neither is needed for WO-01 or WO-02.
+by Git. Paper runs read `EXTRACTOR_MODEL`, `WORKER_MODEL`, and `CRITIC_MODEL`
+as `provider:model-id`, with `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for the
+selected provider. The debug CLIs load `.env`; exported settings take precedence.
+See [agent execution notes](factory/agents/README.md) for pricing and paper intake.
 
 `requirements.lock` records the installed dependency versions. To reproduce
 that environment, install it first, then install the project with

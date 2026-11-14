@@ -10,6 +10,7 @@ from factory.agents.records import TABLES, Records
 from factory.agents.test_worker import CLEAN, LEAK, bars, spec
 from factory.evals.common import EvalResult
 from factory.evals.runner import EvalReport
+from factory.evaluation import RecordedEvaluation
 from factory.llm import Completion
 
 
@@ -25,11 +26,12 @@ def test_run_records_all_stages_without_metric_healing(tmp_path, monkeypatch):
         return bars()
 
     monkeypatch.setattr(orchestrator, "load_bars", load)
-    monkeypatch.setattr(
-        orchestrator,
-        "propose_parallel",
-        lambda *a: {"A": (LEAK, usage), "B": (CLEAN, usage), "C": (CLEAN, usage)},
-    )
+
+    def proposals(spec, schema):
+        assert "after that session closes" in schema["SPY"]["bar_timing"]
+        return {"A": (LEAK, usage), "B": (CLEAN, usage), "C": (CLEAN, usage)}
+
+    monkeypatch.setattr(orchestrator, "propose_parallel", proposals)
     repairs = []
 
     def repair(*args):
@@ -40,14 +42,23 @@ def test_run_records_all_stages_without_metric_healing(tmp_path, monkeypatch):
 
     def evaluate(*a):
         returns = pd.Series([0.01, -0.02, 0.005] * 30)
-        return EvalReport(
-            {
-                n: EvalResult(n, f"eval{n}", n == 1, {"reason": "fixture failure"})
-                for n in range(1, 6)
+        return RecordedEvaluation(
+            EvalReport(
+                {
+                    n: EvalResult(n, f"eval{n}", n == 1, {"reason": "fixture failure"})
+                    for n in range(1, 6)
+                },
+                {},
+                returns,
+                0.01,
+            ),
+            equity={
+                "dates": ["2020-01-01"],
+                "gross": [1.01],
+                "net": [1.009],
+                "is_end": "2020-01-01",
+                "oos_end": "2020-01-01",
             },
-            {},
-            returns,
-            0.01,
         )
 
     monkeypatch.setattr(orchestrator, "evaluate_file", evaluate)
@@ -58,12 +69,15 @@ def test_run_records_all_stages_without_metric_healing(tmp_path, monkeypatch):
     assert set(splits) == {"IS"} and "HOLDOUT" not in splits
     assert all(row["status"] == "FAILED_EVAL_2" for row in result["variants"])
     assert all(len(row["evals"]) == 5 for row in result["variants"])
+    assert all(row["equity"]["net"] == [1.009] for row in result["variants"])
     assert all(row["notes"] for row in result["variants"])
     assert result["estimated_model_cost_usd"] == 0.008
     records = Records(tmp_path / "runs")
     for table in TABLES:
         assert records.db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] > 0
     assert records.db.execute("SELECT COUNT(*) FROM eval_results").fetchone()[0] == 15
+    saved_rows = records.db.execute("SELECT payload FROM variants").fetchall()
+    assert all(json.loads(row[0])["equity"]["gross"] == [1.01] for row in saved_rows)
     records.close()
     events = [
         json.loads(line) for line in (tmp_path / "runs/events.jsonl").read_text().splitlines()

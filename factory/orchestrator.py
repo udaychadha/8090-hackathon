@@ -8,13 +8,17 @@ import time
 import uuid
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from factory.agents.critic import critique
-from factory.agents.extractor import ExtractionError, extract
+from factory.agents.extractor import ExtractionError, extract, paper_metadata
 from factory.agents.records import Records, usage_record
-from factory.agents.worker import VARIANTS, propose_parallel, validate_and_heal
+from factory.agents.worker import VARIANTS, RepairFailure, propose_parallel, validate_and_heal
 from factory.data import DataError, load_bars
 from factory.evals.common import EvalResult
-from factory.evals.runner import evaluate_file, with_deflated
+from factory.evals.lookahead import LookaheadBiasError
+from factory.evals.runner import with_deflated
+from factory.evaluation import evaluate_file
 from factory.llm import LLMError, model_for
 
 SURVIVORSHIP = "Daily universe uses current index membership; results carry survivorship bias."
@@ -41,6 +45,7 @@ def run_paper(paper, *, data_root="data", output_root="."):
             "title": spec.title,
             "source_kind": "paper",
             "spec": spec.model_dump(),
+            "provenance": paper_metadata(paper).get("source", {}),
         }
         summary["source"] = source
         records.put("sources", spec.paper_id, run_id, source)
@@ -89,6 +94,18 @@ def run_paper(paper, *, data_root="data", output_root="."):
                 "columns": list(frame.columns),
                 "dtypes": {name: str(dtype) for name, dtype in frame.dtypes.items()},
                 "index": "UTC DatetimeIndex",
+                "bar_timing": (
+                    "Minute timestamps label bar START. The close becomes available one minute "
+                    "later. XNYS regular sessions include 09:30 through 15:59 New York time; "
+                    "there is no 16:00 bar. On 13:00 early closes the final bar is 12:59. A target "
+                    "at t earns the next bar's close-to-close return via the engine's lag. "
+                    "Use this convention to map the paper's clock-time endpoints; do not "
+                    "assume bars are end-labelled or shift weights yourself."
+                    if spec.frequency == "1min"
+                    else "Daily timestamps identify the session at New York midnight. OHLCV "
+                    "is available after that session closes. A target at t earns the next "
+                    "session's close-to-close return via the engine's lag."
+                ),
             }
             for symbol, frame in is_bars.items()
         }
@@ -119,15 +136,44 @@ def run_paper(paper, *, data_root="data", output_root="."):
                     row["status"] = "BUG_UNRESOLVED"
                     continue
                 row["params"] = definition.params
-                records.event(run_id, "eval", "started", "Running all five evals", variant=variant)
-                # No failed metric or OOS exception is ever fed back to workers.
-                reports[variant] = evaluate_file(path, data_root)
-            except Exception:
+            except Exception as error:
+                if isinstance(error, RepairFailure):
+                    usages.extend(usage_record(item) for item in error.usages)
+                if path.is_file():
+                    row["code"] = path.read_text()
                 row["status"] = "BUG_UNRESOLVED"
-                row["notes"].append("Execution/harness failed; no pass claimed, no OOS repair")
+                row["notes"].append("IS validation or repair failed before Eval 2")
                 summary["cost_complete"] = False
                 operational_failed = True
-                harness_failed = True
+                records.event(
+                    run_id, "worker", "failed", "IS validation or repair failed", variant=variant
+                )
+                continue
+            records.event(run_id, "eval", "started", "Running all five evals", variant=variant)
+            try:
+                # No failed metric or OOS exception is ever fed back to workers.
+                evaluation = evaluate_file(path, data_root)
+                reports[variant] = evaluation.report
+                row["equity"] = evaluation.equity
+                row["equity_boundaries"] = evaluation.boundaries
+                row["activity"] = evaluation.activity
+                if evaluation.activity and evaluation.activity["IS"]["active_bars"] == 0:
+                    row["notes"].append(
+                        "No executed exposure in IS; the strategy hypothesis was not exercised."
+                    )
+                if evaluation.artifact_error:
+                    operational_failed = True
+                    row["notes"].append(evaluation.artifact_error)
+                    records.event(
+                        run_id, "eval", "failed", evaluation.artifact_error, variant=variant
+                    )
+            except Exception as error:
+                row["status"] = "BUG_UNRESOLVED"
+                row["notes"].append("Execution/harness failed; no pass claimed, no OOS repair")
+                operational_failed = True
+                # Lookahead rejection is before Eval 2. An unknown harness error
+                # may have lost a trial and must still fail DSR accounting closed.
+                harness_failed |= not isinstance(error, LookaheadBiasError)
                 records.event(
                     run_id, "eval", "failed", "Execution or harness failed", variant=variant
                 )
@@ -176,7 +222,11 @@ def run_paper(paper, *, data_root="data", output_root="."):
                 result = critique(
                     spec,
                     variant,
-                    {key: value for key, value in row.items() if key not in {"code", "params"}},
+                    {
+                        key: value
+                        for key, value in row.items()
+                        if key not in {"code", "params", "equity", "equity_boundaries"}
+                    },
                 )
                 usages.append(usage_record(result))
                 row["critique"] = result.text
@@ -199,10 +249,10 @@ def run_paper(paper, *, data_root="data", output_root="."):
             graveyard.parent.mkdir(parents=True, exist_ok=True)
             with graveyard.open("a") as stream:
                 stream.write(
-                    f"\n## {spec.title} | {run_id} | {variant}\n\n"
-                    f"{row['status']} ({row['evals_passed']}/5)\n\n"
-                    + records.safe(row["critique"])
-                    + "\n"
+                    records.safe(
+                        f"\n## {spec.title} | {run_id} | {variant}\n\n"
+                        f"{row['status']} ({row['evals_passed']}/5)\n\n" + row["critique"] + "\n"
+                    )
                 )
         summary["status"] = "FAILED" if operational_failed else "COMPLETED"
         return _finish(records, summary, rows, usages, started)
@@ -263,10 +313,11 @@ def _finish(records, summary, rows, usages, started):
             "estimated_model_cost_usd": summary["estimated_model_cost_usd"],
         },
     )
-    return summary
+    return records.safe(summary)
 
 
 def main():
+    load_dotenv(override=False)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paper")
     parser.add_argument("--data", default="data")

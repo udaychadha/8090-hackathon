@@ -1,4 +1,5 @@
 """Offline WO-05 checks; these are not real-paper acceptance tests."""
+
 import hashlib
 import json
 
@@ -11,12 +12,18 @@ from factory.agents import extractor
 def response(text="paper", **overrides):
     spec = {
         "paper_id": "p_" + hashlib.sha256(text.encode()).hexdigest()[:16],
-        "title": "Example", "category": "momentum", "hypothesis": "Trend persists",
-        "universe": ["SPY"], "frequency": "1day", "signal_rules": ["Prior trend"],
-        "claimed_metrics": {}, "ambiguities": ["Position sizing unspecified"],
-        "test_type": "replication", **overrides,
+        "title": "Example",
+        "category": "momentum",
+        "hypothesis": "Trend persists",
+        "universe": ["SPY"],
+        "frequency": "1day",
+        "signal_rules": ["Prior trend"],
+        "claimed_metrics": {},
+        "ambiguities": ["Position sizing unspecified"],
+        "test_type": "replication",
+        **overrides,
     }
-    return llm.Completion(json.dumps(spec), "openai:test", 10, 20, .1, None)
+    return llm.Completion(json.dumps(spec), "openai:test", 10, 20, 0.1, None)
 
 
 def test_role_selection(monkeypatch):
@@ -35,16 +42,22 @@ def test_valid_spec_and_prompt_boundary(monkeypatch):
         assert set(payload) == {"schema", "paper_id", "available_price_tiers", "paper_text"}
         assert "untrusted" in system
         return response()
+
     monkeypatch.setattr(extractor, "complete", fake)
     spec, usage = extractor.extract_text("paper", {"1day": ["SPY"]})
     assert spec.ambiguities and spec.test_type == "replication"
     assert usage.cost_usd is None
 
 
-@pytest.mark.parametrize("overrides", [
-    {"ambiguities": []}, {"paper_id": "wrong"}, {"test_type": "VERIFIED"},
-    {"universe": ["NOTAVAILABLE"]},
-])
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"ambiguities": []},
+        {"paper_id": "wrong"},
+        {"test_type": "VERIFIED"},
+        {"universe": ["NOTAVAILABLE"]},
+    ],
+)
 def test_reject_invalid_or_false_replication(monkeypatch, overrides):
     monkeypatch.setattr(extractor, "complete", lambda *args: response(**overrides))
     with pytest.raises(extractor.ExtractionError):
@@ -57,6 +70,8 @@ def test_missing_paper(tmp_path):
 
 
 def test_explicit_cost_only(monkeypatch):
+    for kind in ("CACHE_READ", "CACHE_WRITE", "CACHE_WRITE_LONG"):
+        monkeypatch.delenv(f"EXTRACTOR_{kind}_USD_PER_MTOK", raising=False)
     monkeypatch.delenv("EXTRACTOR_INPUT_USD_PER_MTOK", raising=False)
     monkeypatch.delenv("EXTRACTOR_OUTPUT_USD_PER_MTOK", raising=False)
     assert llm._cost("extractor", 10, 20) is None
