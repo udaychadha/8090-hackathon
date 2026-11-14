@@ -26,15 +26,19 @@ from factory.llm import LLMError, model_for
 SURVIVORSHIP = "Daily universe uses current index membership; results carry survivorship bias."
 
 
-def run_paper(paper, *, data_root="data", output_root="."):
+def run_paper(paper, *, data_root="data", output_root=".", run_id=None):
     started = time.perf_counter()
     root = Path(output_root)
-    run_id = "r_" + uuid.uuid4().hex[:12]
+    run_id = run_id or ("r_" + uuid.uuid4().hex[:12])
     records = Records(root / "runs")
     usages, rows, reports = [], {}, {}
     operational_failed = False
     harness_failed = False
-    summary = {"run_id": run_id, "status": "RUNNING", "variants": [], "data_needs": []}
+    summary = records.get("runs", run_id, include_voided=True)
+    if summary is not None and (summary["status"] != "RUNNING" or summary.get("source")):
+        records.close()
+        raise ValueError("Run identity is already in use")
+    summary = summary or {"run_id": run_id, "status": "RUNNING", "variants": [], "data_needs": []}
     summary = records.put("runs", run_id, run_id, summary)
     try:
         for role in ("extractor", "worker", "critic"):
@@ -91,90 +95,101 @@ def run_paper(paper, *, data_root="data", output_root="."):
         }
         need = records.put("data_needs", need["id"], run_id, need)
         summary["data_needs"] = [need]
+        summary = records.put("runs", run_id, run_id, summary)
         records.event(run_id, "data", "passed", "Existing price tiers ready")
         schema = worker_context(is_bars, spec.frequency)
         for variant in VARIANTS:
+            rows[variant] = _save_row(records, _row(spec, run_id, variant))
             records.event(run_id, "worker", "started", "Generating strategy", variant=variant)
         proposals = propose_parallel(spec, schema)
         # All three model proposals are concurrent. Validation remains deterministic.
         for variant, proposal in proposals.items():
-            row = rows[variant] = _row(spec, run_id, variant)
-            if isinstance(proposal, Exception):
-                row["status"] = "BUG_UNRESOLVED"
-                row["notes"].append("Worker provider failed; no candidate was evaluated")
-                summary["cost_complete"] = False
-                operational_failed = True
-                records.event(run_id, "worker", "failed", "Worker provider failed", variant=variant)
-                continue
-            code, usage = proposal
-            usages.append(usage_record(usage))
-            path = root / "strategies" / spec.paper_id / run_id / f"{variant}.py"
-            records.event(run_id, "worker", "passed", "Candidate generated", variant=variant)
+            row = rows[variant]
             try:
-                definition, heals = validate_and_heal(
-                    spec, variant, code, is_bars, path, records, run_id
-                )
-                usages.extend(usage_record(item) for item in heals)
-                row["code"] = path.read_text()
-                if definition is None:
+                if isinstance(proposal, Exception):
                     row["status"] = "BUG_UNRESOLVED"
-                    continue
-                row["params"] = definition.params
-            except InactiveStrategy as error:
-                usages.extend(usage_record(item) for item in error.usages)
-                row.update(
-                    status=error.status,
-                    activity={"IS": error.activity},
-                    days_traded=error.activity["days_traded"],
-                    eval_eligible=False,
-                )
-                row["code"] = path.read_text()
-                row["notes"].append(str(error))
-                continue
-            except Exception as error:
-                if isinstance(error, RepairFailure):
-                    usages.extend(usage_record(item) for item in error.usages)
-                if path.is_file():
-                    row["code"] = path.read_text()
-                row["status"] = "BUG_UNRESOLVED"
-                row["notes"].append("IS validation or repair failed before Eval 2")
-                summary["cost_complete"] = False
-                operational_failed = True
-                records.event(
-                    run_id, "worker", "failed", "IS validation or repair failed", variant=variant
-                )
-                continue
-            records.event(run_id, "eval", "started", "Running all five evals", variant=variant)
-            row["eval_eligible"] = True
-            try:
-                # No failed metric or OOS exception is ever fed back to workers.
-                evaluation = evaluate_file(path, data_root)
-                reports[variant] = evaluation.report
-                row["equity"] = evaluation.equity
-                row["equity_boundaries"] = evaluation.boundaries
-                row["activity"] = evaluation.activity
-                if evaluation.activity:
-                    row["days_traded"] = evaluation.activity["IS"].get("days_traded")
-                if evaluation.activity and evaluation.activity["IS"]["active_bars"] == 0:
-                    row["notes"].append(
-                        "No executed exposure in IS; the strategy hypothesis was not exercised."
-                    )
-                if evaluation.artifact_error:
+                    row["notes"].append("Worker provider failed; no candidate was evaluated")
+                    summary["cost_complete"] = False
                     operational_failed = True
-                    row["notes"].append(evaluation.artifact_error)
                     records.event(
-                        run_id, "eval", "failed", evaluation.artifact_error, variant=variant
+                        run_id, "worker", "failed", "Worker provider failed", variant=variant
                     )
-            except Exception as error:
-                row["status"] = "BUG_UNRESOLVED"
-                row["notes"].append("Execution/harness failed; no pass claimed, no OOS repair")
-                operational_failed = True
-                # Lookahead rejection is before Eval 2. An unknown harness error
-                # may have lost a trial and must still fail DSR accounting closed.
-                harness_failed |= not isinstance(error, LookaheadBiasError)
-                records.event(
-                    run_id, "eval", "failed", "Execution or harness failed", variant=variant
-                )
+                    continue
+                code, usage = proposal
+                usages.append(usage_record(usage))
+                path = root / "strategies" / spec.paper_id / run_id / f"{variant}.py"
+                records.event(run_id, "worker", "passed", "Candidate generated", variant=variant)
+                try:
+                    definition, heals = validate_and_heal(
+                        spec, variant, code, is_bars, path, records, run_id
+                    )
+                    usages.extend(usage_record(item) for item in heals)
+                    row["code"] = path.read_text()
+                    if definition is None:
+                        row["status"] = "BUG_UNRESOLVED"
+                        continue
+                    row["params"] = definition.params
+                except InactiveStrategy as error:
+                    usages.extend(usage_record(item) for item in error.usages)
+                    row.update(
+                        status=error.status,
+                        activity={"IS": error.activity},
+                        days_traded=error.activity["days_traded"],
+                        eval_eligible=False,
+                    )
+                    row["code"] = path.read_text()
+                    row["notes"].append(str(error))
+                    continue
+                except Exception as error:
+                    if isinstance(error, RepairFailure):
+                        usages.extend(usage_record(item) for item in error.usages)
+                    if path.is_file():
+                        row["code"] = path.read_text()
+                    row["status"] = "BUG_UNRESOLVED"
+                    row["notes"].append("IS validation or repair failed before Eval 2")
+                    summary["cost_complete"] = False
+                    operational_failed = True
+                    records.event(
+                        run_id,
+                        "worker",
+                        "failed",
+                        "IS validation or repair failed",
+                        variant=variant,
+                    )
+                    continue
+                records.event(run_id, "eval", "started", "Running all five evals", variant=variant)
+                row["eval_eligible"] = True
+                try:
+                    # No failed metric or OOS exception is ever fed back to workers.
+                    evaluation = evaluate_file(path, data_root)
+                    reports[variant] = evaluation.report
+                    row["equity"] = evaluation.equity
+                    row["equity_boundaries"] = evaluation.boundaries
+                    row["activity"] = evaluation.activity
+                    if evaluation.activity:
+                        row["days_traded"] = evaluation.activity["IS"].get("days_traded")
+                    if evaluation.activity and evaluation.activity["IS"]["active_bars"] == 0:
+                        row["notes"].append(
+                            "No executed exposure in IS; the strategy hypothesis was not exercised."
+                        )
+                    if evaluation.artifact_error:
+                        operational_failed = True
+                        row["notes"].append(evaluation.artifact_error)
+                        records.event(
+                            run_id, "eval", "failed", evaluation.artifact_error, variant=variant
+                        )
+                except Exception as error:
+                    row["status"] = "BUG_UNRESOLVED"
+                    row["notes"].append("Execution/harness failed; no pass claimed, no OOS repair")
+                    operational_failed = True
+                    # Lookahead rejection is before Eval 2. An unknown harness error
+                    # may have lost a trial and must still fail DSR accounting closed.
+                    harness_failed |= not isinstance(error, LookaheadBiasError)
+                    records.event(
+                        run_id, "eval", "failed", "Execution or harness failed", variant=variant
+                    )
+            finally:
+                rows[variant] = _save_row(records, row)
         trials = [report.oos_daily_sharpe for report in reports.values()]
         for variant, report in reports.items():
             report = with_deflated(report, trials)
@@ -197,6 +212,7 @@ def run_paper(paper, *, data_root="data", output_root="."):
                 break_even_bps=report.results[2].metrics.get("break_even_bps"),
                 evals=[result.to_dict() for result in report.results.values()],
             )
+            rows[variant] = _save_row(records, row)
             for number, result in report.results.items():
                 records.put(
                     "eval_results",
@@ -243,6 +259,7 @@ def run_paper(paper, *, data_root="data", output_root="."):
                 run_id,
                 {"variant": variant, "text": row["critique"]},
             )
+            rows[variant] = _save_row(records, row)
             graveyard = root / "wiki" / "graveyard.md"
             graveyard.parent.mkdir(parents=True, exist_ok=True)
             with graveyard.open("a") as stream:
@@ -294,9 +311,16 @@ def _row(spec, run_id, variant):
     }
 
 
+def _save_row(records, row):
+    # Defaults are the only active profile. Refresh projections on every state change.
+    row["default_status"] = row["status"]
+    row["default_evals_passed"] = row["evals_passed"]
+    return records.put("variants", row["variant_id"], row["run_id"], row)
+
+
 def _finish(records, summary, rows, usages, started):
     for variant, row in rows.items():
-        rows[variant] = records.put("variants", row["variant_id"], summary["run_id"], row)
+        rows[variant] = _save_row(records, row)
     summary["variants"] = list(rows.values())
     summary["wall_seconds"] = time.perf_counter() - started
     summary["usage"] = usages

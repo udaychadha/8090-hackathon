@@ -42,11 +42,19 @@ def _validated(table, payload):
 
 
 class Records:
-    def __init__(self, root="runs"):
+    def __init__(self, root="runs", *, read_only=False):
         self.root = Path(root)
-        self.root.mkdir(parents=True, exist_ok=True)
+        self.read_only = read_only
+        if read_only:
+            path = self.root / "factory.db"
+            if not path.is_file():
+                raise FileNotFoundError("Research record store does not exist")
+            connection = path.resolve().as_uri() + "?mode=ro"
+        else:
+            self.root.mkdir(parents=True, exist_ok=True)
+            connection = str(self.root / "factory.db")
         self.lock = threading.RLock()
-        self.db = sqlite3.connect(self.root / "factory.db", check_same_thread=False)
+        self.db = sqlite3.connect(connection, uri=read_only, check_same_thread=False)
         tables = {
             r[0] for r in self.db.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
@@ -56,9 +64,10 @@ class Records:
             raise MigrationRequired(
                 "Run factory.record_migration audit and migrate before opening legacy records"
             )
-        with self.db:
-            setup_schema(self.db)
-        self._mirror()
+        if not read_only:
+            with self.db:
+                setup_schema(self.db)
+            self._mirror()
 
     def __enter__(self):
         return self
@@ -68,6 +77,10 @@ class Records:
 
     def safe(self, value):
         return redact(value)
+
+    def _writable(self):
+        if self.read_only:
+            raise PermissionError("This record connection is read-only")
 
     @staticmethod
     def _table(table):
@@ -151,6 +164,7 @@ class Records:
         )
 
     def put(self, table, identifier, run_id, payload):
+        self._writable()
         if table not in TABLES:
             raise ValueError("Unknown record table")
         with self.lock, self.db:
@@ -220,6 +234,7 @@ class Records:
 
     def _mirror(self):
         """Preserve a divergent mirror before recovery; never erase sole evidence."""
+        self._writable()
         path = self.root / "events.jsonl"
         with (self.root / "events.lock").open("a") as lock:
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
@@ -289,6 +304,7 @@ class Records:
         return _validated("events", self.safe(canonical))
 
     def event(self, run_id, stage, status, message, *, variant=None, data=None):
+        self._writable()
         with self.lock:
             with self.db:
                 self.db.execute("BEGIN IMMEDIATE")
@@ -301,6 +317,7 @@ class Records:
 
     def void_run(self, run_id, reason):
         """Atomically invalidate parent, all child records and event index flags."""
+        self._writable()
         if not isinstance(reason, str) or not reason.strip():
             raise ValueError("A nonempty void reason is required")
         reason = self.safe(reason.strip())

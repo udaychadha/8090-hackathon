@@ -166,13 +166,20 @@ def test_extractor_and_critic_receive_generated_context(monkeypatch):
     def complete(role, system, user, **kwargs):
         calls.append((role, system))
         return Completion(
-            json.dumps(supplied) if role == "extractor" else "Narrative", "test", 1, 1, 0, 0
+            json.dumps(supplied)
+            if role == "extractor"
+            else '{"review_topics":["execution_convention"]}',
+            "test",
+            1,
+            1,
+            0,
+            0,
         )
 
     monkeypatch.setattr(extractor, "complete", complete)
     monkeypatch.setattr(critic, "complete", complete)
     spec, _ = extractor.extract_text("paper", {"1day": ["SPY"]})
-    assert critic.critique(spec, "A", {}).text == "Narrative"
+    assert critic.TOPICS["execution_convention"] in critic.critique(spec, "A", {}).text
     assert [role for role, _ in calls] == ["extractor", "critic"]
     assert all(system.endswith(section) for _, system in calls)
 

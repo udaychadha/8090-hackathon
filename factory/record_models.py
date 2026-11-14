@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from pathlib import PurePosixPath
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -616,7 +617,34 @@ class Diagnostic(Evidence):
     msg: StrictStr = Field(description="Safe diagnostic text with no rejected input.")
 
 
+class Submission(Evidence):
+    origin: Literal["api"] = Field(description="Submission owner for restart recovery.")
+    upload_name: Identifier = Field(
+        description="User-supplied display filename, never a disk path."
+    )
+    upload_sha256: Annotated[StrictStr, Field(pattern=r"^[a-f0-9]{64}$")] = Field(
+        description="Fingerprint of the supplied PDF bytes."
+    )
+    input_path: Identifier = Field(description="Project-relative registered upload location.")
+    accepted_at: UTCString = Field(description="Actual UTC instant when the API accepted this PDF.")
+
+    @model_validator(mode="after")
+    def relative_upload(self):
+        path = PurePosixPath(self.input_path)
+        if path.is_absolute() or ".." in path.parts or "\\" in self.input_path:
+            raise ValueError("Upload location must be a safe relative path")
+        if path.parts[:2] != ("runs", "uploads") or path.suffix.lower() != ".pdf":
+            raise ValueError("Upload location must be a registered PDF")
+        if PurePosixPath(self.upload_name).name != self.upload_name or "\\" in self.upload_name:
+            raise ValueError("Display filename must not contain a path")
+        return self
+
+
 class Run(Voidable):
+    submission: Submission | None = Field(
+        default=None,
+        description="API intake ownership and provenance; absent for historical CLI runs.",
+    )
     status: RunStatus = Field(
         description="Pipeline lifecycle state; COMPLETED does not mean strategy success."
     )

@@ -15,3 +15,6 @@ None pending yet.
 - Include void evidence only through explicit audit access.
 - Preserve missing historical values as unknown, including creation timestamps
   that the old store never recorded.
+- New critic calls select from fixed qualitative review questions. The application
+  renders their wording; free model prose cannot introduce a status, metric or
+  verdict. Existing historical narratives remain separately labelled evidence.

@@ -229,8 +229,11 @@ shown, so near-misses are visible without touching a threshold.
   - C — regime-filtered: same signal plus one volatility or trend filter
 - **Self-heal** — on a bug-class failure, send the worker its code plus the
   exact error (stack trace, or the lookahead timestamp and symbol). Max 3.
-- **Critic** — given claimed metrics and eval telemetry, writes a short
-  post-mortem and appends it to `wiki/graveyard.md`. Narrative only.
+- **Critic** — factual post-mortem text comes from deterministic record templates.
+  The configured model selects qualitative review topics from a fixed list;
+  code renders their fixed question text, with no model-authored status, metric
+  or verdict. The narrative is appended to `wiki/graveyard.md`; historical free
+  prose remains separately labelled as unverified model narrative.
 - **Finder** — proposes public data sources for unmet data needs. See WO-14.
 
 Generated code runs only through `factory/sandbox.py`. That is crash
@@ -266,7 +269,7 @@ this section first.
 | `GET /api/runs/{run_id}` | Run summary | `{"run_id","source","status","variants":[LeaderboardRow],"data_needs":[DataNeed]}` |
 | `GET /api/leaderboard` | All variants | `{"rows":[LeaderboardRow]}` |
 | `GET /api/variants/{variant_id}` | Tearsheet | `VariantDetail` |
-| `GET /api/graveyard` | Post-mortems | `{"markdown"}` |
+| `GET /api/graveyard` | Structured post-mortems and compatible rendered evidence | `{"markdown", "entries":[GraveyardEntry]}` |
 | `POST /api/intake` | One chat turn. `{"session_id"?, "message"}` | `IntakeReply` |
 | `GET /api/data/catalog` | Datasets on disk | `{"datasets":[Dataset]}` |
 | `POST /api/data/upload` | CSV of dated events, multipart, plus column mapping | `Dataset` |
@@ -288,7 +291,7 @@ LeaderboardRow = {
   "verified_sharpe": number | null,      # OOS, net of 5 bps
   "break_even_bps": number | null,
   "evals_passed": 0..5,
-  "status": "VERIFIED" | "FAILED_EVAL_n" | "BUG_UNRESOLVED" | "BLOCKED_DATA" | "RUNNING",
+  "status": "VERIFIED" | "FAILED_EVAL_n" | "BUG_UNRESOLVED" | "BLOCKED_DATA" | "RUNNING" | "INACTIVE" | "VOID",
   "profile": string,                     # "default" until WO-16
   "default_status": string,              # verdict under the default profile
   "default_evals_passed": 0..5
@@ -306,7 +309,8 @@ VariantDetail = LeaderboardRow + {
 
 DataNeed = {
   "id", "kind": "price_bars" | "events", "name": string,
-  "symbols": [string], "frequency": string | null, "start": date, "end": date,
+  "symbols": [string], "frequency": string | null,
+  "start": date_or_UTC_timestamp | null, "end": date_or_UTC_timestamp | null,
   "status": "on_disk" | "fetching" | "fetched" | "needs_provider"
             | "needs_upload" | "candidates" | "unavailable",
   "provider": string | null,
@@ -330,7 +334,8 @@ EvalSchema = {"evals": [{
   "question": string,                    # plain English, e.g. "Does it still
                                          # make money after trading costs?"
   "settings": [Knob],                    # changing one needs a re-run
-  "checks":   [Knob + {"metric": string, "op": ">=" | "<=" | ">"}]
+  "checks":   [Knob + {"metric": string, "op": ">=" | "<=" | ">",
+                       "relative_to": string | null}]
 }]}
 
 Knob = {"key": string, "label": string, "default": number,
@@ -341,6 +346,158 @@ Knob = {"key": string, "label": string, "default": number,
 EvalProfile = {"name": string, "editable": bool,
                "values": {key: number}, "stale": bool}
 ```
+
+### WO-09 implementation extensions (November 14)
+
+The following additions are part of the API contract before implementation.
+Persisted records use `factory/record_models.py`, schema version 1.0.0;
+[docs/RECORDS.md](docs/RECORDS.md) records the completed migration. API projections
+must validate their response shapes too. All reads exclude voided runs and
+their children by default, including direct lookups, events and artifacts.
+`include_voided=true` is an explicit audit opt-in; a hidden or absent identifier
+returns 404. Filters/sorts use the store's indexed projections where applicable.
+Unknown historical information stays null or absent; never fabricate a date,
+metric, source association or completed step.
+
+| Method and path | Purpose | Returns |
+|---|---|---|
+| `GET /api/health` | Local service and implemented capabilities | `{"status":"ok", "schema_version", "capabilities":{name:bool}}` |
+| `GET /api/runs` | Run history; optional source_id/status filters and audit opt-in | `{"runs":[RunSummary]}` |
+| `GET /api/sources` | Retained sources | `{"sources":[Source]}` |
+| `GET /api/sources/{source_id}` | Current source and registered source artifacts | `{"source":Source, "artifacts":[Artifact]}` |
+| `GET /api/runs/{run_id}/events/history` | Finite replay with after_seq and bounded limit | `{"events":[Event], "next_seq":int}` |
+| `GET /api/runs/{run_id}/artifacts` | Related retained evidence | `{"artifacts":[Artifact]}` |
+| `GET /api/artifacts` | Allowlisted evidence inventory; optional run_id | `{"artifacts":[Artifact]}` |
+| `GET /api/artifacts/{artifact_id}` | Safe text/JSON preview or metadata for binary evidence | `ArtifactView` |
+| `GET /api/artifacts/{artifact_id}/download` | Sanitized attachment, where descriptor permits | bytes with safe content type and attachment disposition |
+| `GET /api/data/datasets/{dataset_id}` | Manifest, ingest metadata, splits and contract fields | `DatasetDetail` |
+| `GET /api/data/datasets/{dataset_id}/preview` | Bounded downsampled IS/OOS rows and gap intervals | `DatasetPreview` |
+| `GET /api/data/ingest-events` | Original ingest event schema; scope main/smoke, offset/limit | `{"events":[object], "total":int, "next_offset":int|null}` |
+| `GET /api/data/audits` | Historical audit and related evidence | `{"audit":object|null, "artifacts":[Artifact]}` |
+| `GET /api/data/contract` | Canonical data ontology and generated reference | `{"schema_version", "contract":object, "markdown":string}` |
+| `GET /api/data/universe` | Current membership snapshot and source provenance | `{"symbols":[string], "provenance":object, "notes":[string]}` |
+| `GET /api/records/schema` | Generated JSON schemas of all eight persisted record kinds | `{"schema_version", "models":{kind:object}}` |
+
+Existing `/api/runs/{run_id}` returns RunDetail below. Leaderboard accepts
+source_id, status, test_type and frequency filters, an allowlisted sort and
+direction, plus include_voided. It returns rows only; headline counts derive
+from those rows. Source records contain the current extraction, while RunDetail
+retains the exact historical spec snapshot. All default-profile rows expose
+`profile="default"`, `default_status` and `default_evals_passed` without rejudging.
+
+```
+RunSummary = {
+  "run_id", "status", "source": Source|null,
+  "variants":[LeaderboardRow], "data_needs":[DataNeed],
+  "created_at": UTC|null, "started_at": UTC|null,
+  "wall_seconds": number|null, "estimated_model_cost_usd": number|null,
+  "cost_complete": bool|null, "voided": bool,
+  "void_reason": string|null, "error_type": string|null, "error": string|null
+}
+RunDetail = RunSummary + {
+  "variants":[VariantRun], "steps":[Step], "usage":[Usage],
+  "extraction_diagnostics":[Diagnostic], "artifacts":[Artifact]
+}
+RunDetail += {"submission": {"origin":"api", "upload_name":string,
+  "upload_sha256":string, "input_path":relative_path, "accepted_at":UTC}|null}
+LeaderboardRow += {
+  "summary": string, "days_traded": int|null, "notes":[string],
+  "voided":bool, "void_reason":string|null, "created_at":UTC|null
+}
+VariantRun = LeaderboardRow + {"steps":[Step]}
+Step = {
+  "id":string, "kind":"extract"|"data"|"code"|"heal"|"eval"|"critic",
+  "label":string,
+  "state":"pending"|"running"|"pass"|"failed"|"recorded"|"fixed"|"not_run",
+  "number":int|null, "attempts":int, "max_attempts":int|null,
+  "details":[string], "logs":[Event]
+}
+VariantDetail += {
+  "summary":string, "steps":[Step], "activity":object|null,
+  "days_traded":int|null, "equity_boundaries":object|null,
+  "source":Source|null, "artifacts":[Artifact], "original_result":object|null,
+  "voided":bool, "void_reason":string|null
+}
+GraveyardEntry = {
+  "variant_id", "run_id", "source_title", "variant", "status", "test_type",
+  "frequency", "evals_passed", "summary", "cause":string,
+  "critique":string|null, "notes":[string], "voided":bool,
+  "void_reason":string|null, "original_result":object|null
+}
+Dataset += {
+  "id", "scope":"main"|"smoke", "schema_version", "feed", "adjustment",
+  "fill_rate":number, "expected_rows":int|null, "missing_rows":int|null,
+  "notes":[string]
+}
+DatasetDetail = {"dataset":Dataset, "manifest":object, "metadata":object,
+                 "splits":object, "fields":object, "artifacts":[Artifact]}
+DatasetPreview = {
+  "dataset_id", "rows":[object], "splits":object, "coverage":object,
+  "gaps":[{"start":UTC,"end":UTC,"rows":int}],
+  "total_gaps":int, "holdout_sealed":true, "downsampled":bool
+}
+Artifact = {
+  "id", "name", "kind", "media_type", "size_bytes":int,
+  "run_ids":[string], "source_id":string|null, "dataset_id":string|null,
+  "historical":bool, "audit_only":bool, "downloadable":bool, "notes":[string]
+}
+ArtifactView = {"artifact":Artifact, "content":string|null,
+                "offset":int, "next_offset":int|null}
+```
+
+Variant code, params, equity and critique are nullable when never produced;
+missing charts must not become empty invented curves. Heal detail includes the
+recorded `result_error` when present. Creation time is distinct from started_at:
+the latter may use the earliest recorded run event when legacy creation time is
+unknown. A fixed repair step labels the successful attempt as `fixed n/3`.
+Terminated runs mark unexecuted steps `not_run`, not permanently pending.
+Only persisted eval results establish eval pass/fail; preliminary IS bug-check
+events do not substitute for a completed performance harness.
+
+Summaries, status/metric/verdict detail lines and structured graveyard causes
+are deterministic templates over stored facts. No model call writes or edits
+these fields. Historical critic text is labelled unverified model narrative and
+kept separate from authoritative results. New critic requests must not generate
+status, metric or verdict claims; factual postmortem sections are deterministic.
+
+PDF POST accepts a text-based PDF up to 30 MB, reserves a durable run_id, then
+executes the real existing pipeline in the background. Invalid input returns
+422/413, a concurrent local submission returns 409, and a background failure is
+recorded as FAILED with a terminal event. SSE supplies global `id: seq` and one
+typed Event JSON per `data:` message, supports `after_seq` and Last-Event-ID,
+replays from zero, sends keepalive comments while active and closes after the
+terminal event and the remaining recorded event tail. Reopening a run reloads durable state.
+Restart recovery marks abandoned locally owned runs failed; it never pretends they
+are still executing. An API-owned terminal run missing its final event receives an
+explicit recovery event derived only from its stored state. A historical terminal
+run with no retained final event closes SSE after a short idle grace period with
+an explanatory comment; it does not receive an invented original event.
+
+Catalog is built from actual manifests/metadata, since catalog.json does not
+yet exist. Main datasets are the default; smoke is an explicit separate scope.
+Previews accept `split=visible` (default, IS plus OOS), `IS` or `OOS` and
+`limit=1..2000` (default 500). They show split boundaries and sealed HOLDOUT coverage;
+no raw HOLDOUT observations or full Parquet downloads are exposed. Audits show
+their historical timestamp and fill-rate denominator. Artifact IDs resolve
+only through an allowlisted inventory; reject traversal/symlink escape, redact
+credentials on reads/exports, and never serve arbitrary HTML or database bytes
+as active content. Original PDFs are attachments, treated only as source text.
+
+The eval schema reads actual constants in factory/evals/config.py; all current
+settings/checks are read-only and locked. No invented capacity eval or fixture
+counts. EvalSchema also returns `readonly=true`, `constants` (numeric scalar or
+numeric-array values from config.py), and `notes`. Each eval additionally has
+`data_scope`, `notes`, `source_file` and read-only `source_code` from its existing
+implementation; these explain fixed mathematical guards as well as thresholds.
+For checks, null `relative_to` means `metric op default`; a named relative metric
+means `metric op (default * relative_to)`. Eval 4 compares OOS Sharpe against a
+multiple of IS Sharpe, rather than comparing the reported ratio when IS is negative.
+Only the default profile is readable. English intake, saved-spec start,
+event upload, provider-key writes, source approval and custom profiles are not
+implemented in this work: their controls stay disabled with "not available yet"
+and their write endpoints return 501 with that detail. Provider presence may be
+reported from configured environment-variable presence only, without a key or
+an invented connectivity test. No settings or eval logic change.
 
 ## Interface
 
