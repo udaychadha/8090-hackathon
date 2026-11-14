@@ -196,3 +196,20 @@ def wide_frames(bars: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
         ).sort_index()
         for column in OHLCV
     }
+
+
+def daily_from_intraday(bars: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    """Aggregate regular-hours minute bars to one bar per New York session.
+
+    For symbols that exist only in the intraday tier (the ETFs). Timestamps
+    follow the daily tier: New York midnight of the session, in UTC.
+    """
+    result = {}
+    for symbol, frame in bars.items():
+        sessions = frame.index.tz_convert("America/New_York").normalize()
+        daily = frame.groupby(sessions).agg(
+            {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+        )
+        daily.index = daily.index.tz_convert("UTC").rename("timestamp")
+        result[symbol] = normalize_bars(daily)
+    return result
