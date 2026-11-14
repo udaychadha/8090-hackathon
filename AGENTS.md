@@ -506,13 +506,27 @@ from those rows. Source records contain the current extraction, while RunDetail
 retains the exact historical spec snapshot. All default-profile rows expose
 `profile="default"`, `default_status` and `default_evals_passed` without rejudging.
 
-Live progress is separate from authoritative status. A generic harness-start
-event does not prove that each eval is currently executing; unpublished checks
-show `awaiting_results`. A completed lane awaiting the shared trial-cohort judgment
-shows `awaiting_judgment`, based on an explicit completion event or the retained
-IS/OOS activity and boundary artifacts written only after evaluation returns.
-Its summary says computation is complete while final judgment is pending. Final
-pass/fail and eval counts remain unchanged until their records are published.
+Live progress exposes each eval independently. The owner's November 14 correction
+requires exact Eval 1–4 results to be persisted and streamed as each finishes;
+only Eval 5 waits for the shared trial cohort. Observational callbacks in the
+harness are authorized for this purpose; they must not change executions,
+thresholds or pass rules. Already-running processes must not be interrupted.
+The Run screen shows five clickable result rows per variant, actual metrics,
+the specific active check when reported, and an explicit dependency for Eval 5.
+An elapsed timer requires a real per-eval start event; a generic harness start
+does not establish which individual eval is active.
+
+For an older active process that has not published individual results, the API
+may recover display evidence from saved metrics without writes or strategy
+execution: a recorded entry into Eval 2 establishes successful lookahead;
+the saved cost grid establishes friction; a nonpositive base Sharpe establishes
+sensitivity failure; complete daily equity with validated IS/OOS boundaries and
+matching saved Sharpes supports decay reconstruction. Label this provenance in
+each step and never invent missing cuts or jitter measurements. Original eval
+records always take precedence. Recovery never changes persisted verdicts or
+trial accounting. Active API pass counts reflect available results; final stored
+counts replace them when published. Unknown individual outcomes stay explicitly
+unpublished, rather than implying every check is running or hiding known failures.
 
 ```
 RunSummary = {
@@ -581,8 +595,12 @@ recorded `result_error` when present. Creation time is distinct from started_at:
 the latter may use the earliest recorded run event when legacy creation time is
 unknown. A fixed repair step labels the successful attempt as `fixed n/3`.
 Terminated runs mark unexecuted steps `not_run`, not permanently pending.
-Only persisted eval results establish eval pass/fail; preliminary IS bug-check
-events do not substitute for a completed performance harness.
+Persisted eval results establish authoritative pass/fail. The labelled live
+recovery described above exposes deterministically recoverable outcomes without
+changing those records. Preliminary IS bug-check events alone do not establish
+lookahead passage; the recorded entry into performance Eval 2 does.
+Tearsheet eval views label recovered metrics with
+`evidence_source="recovered_from_saved_evidence"` and a plain-English `reason`.
 
 Summaries, status/metric/verdict detail lines and structured graveyard causes
 are deterministic templates over stored facts. No model call writes or edits

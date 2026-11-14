@@ -34,12 +34,12 @@ const check = (state: Step["state"]): Step => ({
 it.each([
   [
     "awaiting_judgment",
-    "Awaiting final judgment",
+    "Waiting for trials",
     "Computation complete; awaiting final judgment",
   ],
   [
     "awaiting_results",
-    "Awaiting results",
+    "Not published",
     "Harness active; individual outcomes not yet published.",
   ],
 ] as const)(
@@ -94,8 +94,8 @@ const lane = (
 });
 
 it.each([
-  ["awaiting_judgment", "Awaiting final judgment", "RUNNING"],
-  ["awaiting_results", "Awaiting results", "RUNNING"],
+  ["awaiting_judgment", "In progress", "RUNNING"],
+  ["awaiting_results", "In progress", "RUNNING"],
   ["not_run", "Run ended", "FAILED"],
   ["awaiting_judgment", "Run ended", "FAILED"],
 ] as const)(

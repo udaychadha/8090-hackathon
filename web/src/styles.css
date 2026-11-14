@@ -598,7 +598,8 @@ td .pill {
 }
 .variant-card {
   flex-direction: row;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   padding: var(--s5);
   gap: var(--s5);
 }
@@ -1413,4 +1414,76 @@ dialog .code {
   .gross-metrics {
     grid-template-columns: 1fr;
   }
+}
+
+.variant-eval-list {
+  display: grid;
+  gap: var(--s2);
+  margin-top: var(--s3);
+}
+.variant-eval-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s1) var(--s3);
+  padding: var(--s3);
+  min-width: 0;
+  text-align: left;
+  font-size: var(--caption);
+}
+.variant-eval-row .eval-preview {
+  grid-column: 1 / -1;
+  color: var(--body);
+  overflow-wrap: anywhere;
+}
+.variant-eval-row .eval-state {
+  color: var(--muted);
+}
+.variant-eval-row.failed .eval-state {
+  color: var(--failure);
+}
+.variant-eval-row.running .eval-state {
+  color: var(--warning);
+}
+.variant-result > .pill {
+  max-width: var(--source-min);
+  white-space: normal;
+  text-align: right;
+}
+
+.variant-eval-list,
+.variant-caveats {
+  flex: 1 0 100%;
+  min-width: 0;
+}
+.variant-eval-list {
+  margin-top: 0;
+  gap: var(--s1);
+}
+.variant-eval-row {
+  padding: var(--s2) var(--s3);
+}
+.variant-eval-row .eval-preview {
+  font-weight: 400;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.eval-provenance {
+  grid-column: 1 / -1;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.variant-caveats .notes {
+  gap: var(--s1);
+}
+.variant-caveats .notice {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--caption);
+  color: var(--muted);
 }

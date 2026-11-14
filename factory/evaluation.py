@@ -7,6 +7,8 @@ OOS data to model workers. Each slice starts flat, as in the reference harness.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 
 import pandas as pd
@@ -17,6 +19,33 @@ from factory.data import load_bars
 from factory.engine import backtest, daily_compound
 from factory.evals import config
 from factory.evals.runner import EvalReport, evaluate, sandbox_runner
+
+_PROGRESS = ContextVar("evaluation_progress", default=None)
+
+
+@contextmanager
+def evaluation_progress(observer):
+    """Scope a durable progress observer to one caller, never global harness state."""
+    token = _PROGRESS.set(observer)
+    try:
+        yield
+    finally:
+        _PROGRESS.reset(token)
+
+
+def _emit_progress(number, status, message, result=None):
+    observer = _PROGRESS.get()
+    if observer is not None:
+        observer(number, status, message, result)
+
+
+def _eval_started(number):
+    _emit_progress(number, "started", f"Eval {number} started")
+
+
+def _eval_result(result):
+    status = "passed" if result.passed else "failed"
+    _emit_progress(result.number, status, f"Eval {result.number} {status}", result)
 
 
 @dataclass(frozen=True)
@@ -54,14 +83,23 @@ def evaluate_file(
     )
 
     def record_run(bars, params=None):
+        jitter = bars is is_bars and params is not None
+        step = len(jitter_capture.rows) + 1
+        total = len(jitter_capture.expected)
+        if jitter:
+            _emit_progress(3, "info", f"Eval 3 parameter jitter {step}/{total} started")
         try:
             weights = run(bars, params)
         except Exception as error:
-            if bars is is_bars and params is not None:
+            if jitter:
                 jitter_capture.observe(params, error=error)
+                _emit_progress(
+                    3, "info", f"Eval 3 parameter jitter {step}/{total} execution failed"
+                )
             raise
-        if bars is is_bars and params is not None:
+        if jitter:
             jitter_capture.observe(params, weights)
+            _emit_progress(3, "info", f"Eval 3 parameter jitter {step}/{total} execution complete")
         if params is None:
             if bars is is_bars:
                 captured["IS"] = weights.copy()
@@ -79,6 +117,8 @@ def evaluate_file(
         is_bars,
         oos_bars,
         on_eval2_started=on_eval2_started,
+        on_eval_started=_eval_started,
+        on_eval_result=_eval_result,
     )
     try:
         diagnostics = gross_diagnostics.diagnostics_from_targets(

@@ -145,11 +145,19 @@ class RunDetail(RunSummary):
     artifacts: list[Artifact]
 
 
+class EvalMetricsView(EvalMetrics):
+    """Presentation provenance only; never added to the persisted record schema."""
+
+    evidence_source: Literal["recovered_from_saved_evidence"] | None = Field(
+        default=None, description="Explicit read-only recovery from saved live evidence."
+    )
+
+
 class EvalView(Response):
     n: int = Field(ge=1, le=5)
     name: str
     passed: bool
-    metrics: EvalMetrics
+    metrics: EvalMetricsView
 
 
 class HealView(Response):

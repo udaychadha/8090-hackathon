@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import Markdown from "react-markdown";
 import {
@@ -183,7 +183,7 @@ export function EvalDots({
           );
         })}
       </div>
-      <span className="mono">{passed}/5</span>
+      <span className="mono">{passed}/5 passed</span>
     </div>
   );
 }
@@ -219,19 +219,65 @@ export function LogList({ events }: { events: Event[] }) {
     <Empty>No retained events for this step.</Empty>
   );
 }
-const stepStateLabel = (state: string) =>
+const stepStateLabel = (state: string, kind?: string) =>
   state === "awaiting_judgment"
-    ? "Awaiting final judgment"
+    ? "Waiting for trials"
     : state === "awaiting_results"
-      ? "Awaiting results"
-      : human(state);
+      ? "Not published"
+      : state === "recorded" && kind === "eval"
+        ? "Details not published"
+        : human(state);
+
+export const availableEvalCount = (steps: Step[]) =>
+  steps.filter(
+    (step) => step.kind === "eval" && ["pass", "failed"].includes(step.state),
+  ).length;
 
 function variantProgressLabel(variant: VariantRun): string | null {
   if (variant.status !== "RUNNING") return null;
-  const state = ["awaiting_judgment", "awaiting_results"].find((state) =>
-    variant.steps.some((step) => step.state === state),
+  const failed = variant.steps.find(
+    (step) => step.kind === "eval" && step.state === "failed",
   );
-  return state ? stepStateLabel(state) : null;
+  if (failed)
+    return `Fails Eval ${failed.number} · ${availableEvalCount(variant.steps) === 5 ? "evaluations complete" : "checking remaining evals"}`;
+  const active = variant.steps.find(
+    (step) => step.kind === "eval" && step.state === "running",
+  );
+  if (active) return `${active.label.replace(/^\d+\.\s*/, "")} running`;
+  return "In progress";
+}
+
+function StepElapsed({ step }: { step: Step }) {
+  const start =
+    step.state === "running"
+      ? [...step.logs]
+          .reverse()
+          .find(
+            (event) =>
+              event.stage === "eval" &&
+              event.status === "started" &&
+              event.data.eval === step.number,
+          )?.ts
+      : undefined;
+  const started = start ? Date.parse(start) : NaN;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!Number.isFinite(started)) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [started]);
+  if (!Number.isFinite(started)) return null;
+  const seconds = Math.max(0, Math.floor((now - started) / 1000));
+  const duration =
+    seconds < 60
+      ? `${seconds}s`
+      : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  return (
+    <span className="caption" title={`Since recorded eval start: ${start}`}>
+      {duration} elapsed
+    </span>
+  );
 }
 
 export function VariantStatus({
@@ -259,7 +305,7 @@ export function VariantStatus({
   return progress ? (
     <span
       className="pill"
-      title="The run remains active; no final judgment has been published."
+      title="Live progress from available evaluation evidence; remaining checks may still be executing."
     >
       {progress}
     </span>
@@ -268,11 +314,28 @@ export function VariantStatus({
   );
 }
 
-export function StepPipeline({ steps }: { steps: Step[] }) {
+export function StepPipeline({
+  steps,
+  selectedId,
+  onSelect,
+}: {
+  steps: Step[];
+  selectedId?: string | null;
+  onSelect?: (id: string) => void;
+}) {
   const [selected, setSelected] = useState<string | null>(null);
+  const detailRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (selectedId) detailRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [selectedId]);
   const step =
-    steps.find((item) => item.id === selected) ??
+    steps.find((item) => item.id === (selectedId ?? selected)) ??
     steps.find((item) => item.state === "running") ??
+    steps.find(
+      (item) =>
+        item.kind === "eval" &&
+        ["pass", "failed", "recorded"].includes(item.state),
+    ) ??
     steps.find((item) => item.state === "awaiting_judgment") ??
     steps.find((item) => item.state === "awaiting_results") ??
     steps.find((item) => item.state === "failed") ??
@@ -290,7 +353,9 @@ export function StepPipeline({ steps }: { steps: Step[] }) {
             key={item.id}
             role="tab"
             aria-selected={item.id === step.id}
-            onClick={() => setSelected(item.id)}
+            onClick={() =>
+              onSelect ? onSelect(item.id) : setSelected(item.id)
+            }
             className={`pipeline-node ${item.state}`}
           >
             <span className="step-symbol" aria-hidden="true">
@@ -304,21 +369,24 @@ export function StepPipeline({ steps }: { steps: Step[] }) {
             </span>
             <strong>{item.label}</strong>
             <span className="caption">
-              {stepStateLabel(item.state)}
+              {stepStateLabel(item.state, item.kind)}
               {item.kind === "heal" && item.attempts
                 ? ` ${item.attempts}/${item.max_attempts ?? 3}`
                 : ""}
             </span>
+            <StepElapsed step={item} />
           </button>
         ))}
       </div>
       <section
+        ref={detailRef}
         className={`step ${step.state}`}
         aria-label={`${step.label} details`}
       >
         <div className="row between step-detail-heading">
           <strong>{step.label}</strong>
-          <Chip>{stepStateLabel(step.state)}</Chip>
+          <Chip>{stepStateLabel(step.state, step.kind)}</Chip>
+          <StepElapsed step={step} />
         </div>
         <div className="step-details">
           {step.details.map((line, i) => (
@@ -339,11 +407,13 @@ export function VariantCard({
   parentStatus,
   audit = false,
   onSelect,
+  onSelectStep,
 }: {
   variant: VariantRun;
   parentStatus?: string;
   audit?: boolean;
   onSelect?: () => void;
+  onSelectStep?: (id: string) => void;
 }) {
   const evals = variant.steps
     .filter(
@@ -373,7 +443,6 @@ export function VariantCard({
             {variant.frequency} · {variant.profile} profile
           </span>
         </div>
-        <Notes notes={variant.notes} />
       </div>
       <div className="variant-result">
         <EvalDots
@@ -381,6 +450,9 @@ export function VariantCard({
           results={evals}
           verified={variant.status === "VERIFIED"}
         />
+        <span className="caption">
+          {availableEvalCount(variant.steps)}/5 results available
+        </span>
         <VariantStatus variant={variant} parentStatus={parentStatus} />
         <Link
           className="caption"
@@ -388,6 +460,58 @@ export function VariantCard({
         >
           Tearsheet →
         </Link>
+      </div>
+      <div
+        className="variant-eval-list"
+        aria-label={`${variant.variant} evaluation results`}
+      >
+        {variant.steps
+          .filter((step) => step.kind === "eval")
+          .map((step) => {
+            const details = step.details.filter(
+              (line) => !line.startsWith("Recorded verdict:"),
+            );
+            const provenance = details.find((line) =>
+              /^(Recovered from|Failure follows from)/.test(line),
+            );
+            const lines = details.filter((line) => line !== provenance);
+            const preview =
+              step.state === "recorded"
+                ? (lines.find((line) => /\d/.test(line)) ?? lines[0] ?? "")
+                : lines
+                    .slice(0, ["pass", "failed"].includes(step.state) ? 2 : 1)
+                    .join(" · ");
+            const source = provenance
+              ?.replace(/^Recovered from /, "Recovered: ")
+              .replace(/^Failure follows from /, "Derived: ")
+              .split(/[.;]/)[0];
+            return (
+              <button
+                key={step.id}
+                className={`variant-eval-row ${step.state}`}
+                onClick={() => onSelectStep?.(step.id)}
+              >
+                <strong>{step.label}</strong>
+                <span className="eval-state">
+                  {stepStateLabel(step.state, step.kind)}
+                </span>
+                <StepElapsed step={step} />
+                {preview && (
+                  <span className="eval-preview mono" title={preview}>
+                    {preview}
+                  </span>
+                )}
+                {source && (
+                  <span className="eval-provenance caption" title={provenance}>
+                    {source}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+      </div>
+      <div className="variant-caveats">
+        <Notes notes={variant.notes} />
       </div>
     </article>
   );

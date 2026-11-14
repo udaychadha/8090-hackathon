@@ -1,7 +1,8 @@
-"""Deterministic presentation of stored evidence; no LLM or eval recomputation."""
+"""Deterministic stored evidence and labelled, read-only live result recovery."""
 
 from __future__ import annotations
 
+from factory.api.live_evidence import recover_evaluations
 from factory.api.schemas import DataNeed, LeaderboardRow, RunSummary
 
 EVAL_NAMES = {1: "Lookahead", 2: "Friction", 3: "Sensitivity", 4: "Decay", 5: "Deflated Sharpe"}
@@ -35,8 +36,21 @@ def summary(row, *, run=None, events=()):
                 "Run ended before final evaluation results were published; "
                 f"{count}/5 evaluations recorded as passed."
             )
+        known = {n: item["result"] for n, item in recover_evaluations(row).items()}
+        known.update({item["number"]: item for item in row.get("evals", [])})
+        failed = next((n for n in sorted(known) if not known[n]["passed"]), None)
+        if failed is not None:
+            return (
+                f"Eval {failed} ({EVAL_NAMES[failed]}) failed; {len(known)}/5 results available. "
+                "Remaining checks continue."
+            )
+        if known:
+            return (
+                f"{sum(e['passed'] for e in known.values())}/5 checks passed so far; "
+                "remaining results appear as they finish."
+            )
         if computation_complete(row, events):
-            return "Computation complete; awaiting final judgment."
+            return "Checks finished; this older runner has not published individual outcomes yet."
     if status == "VERIFIED":
         return "All five deterministic evaluations passed."
     if status.startswith("FAILED_EVAL_"):
@@ -60,6 +74,12 @@ def leaderboard_row(row, *, run=None, events=()):
     projected = {key: row.get(key) for key in fields}
     projected["notes"] = row.get("notes", [])
     projected["summary"] = summary(row, run=run, events=events)
+    if row["status"] == "RUNNING" and (run is None or run["status"] == "RUNNING"):
+        known = {n: item["result"] for n, item in recover_evaluations(row).items()}
+        known.update({item["number"]: item for item in row.get("evals", [])})
+        if known:
+            projected["evals_passed"] = sum(item["passed"] for item in known.values())
+            projected["default_evals_passed"] = projected["evals_passed"]
     return projected
 
 
@@ -73,6 +93,26 @@ def evaluations(row, records, *, include_voided=False):
         if item["number"] in values and item != values[item["number"]]:
             raise ValueError("Embedded and standalone eval evidence disagree")
         values[item["number"]] = item
+    return [values[n] for n in sorted(values)]
+
+
+def display_evaluations(row, run, recorded):
+    """Tearsheet view only: distinguish recovered measurements from stored reports."""
+    values = {item["number"]: item for item in recorded}
+    if row["status"] == "RUNNING" and run["status"] == "RUNNING":
+        for number, evidence in recover_evaluations(row).items():
+            if number in values:
+                continue
+            result = evidence["result"]
+            provenance = evidence.get("provenance") or " ".join(evidence["details"])
+            values[number] = {
+                **result,
+                "metrics": {
+                    **result["metrics"],
+                    "evidence_source": "recovered_from_saved_evidence",
+                    "reason": provenance,
+                },
+            }
     return [values[n] for n in sorted(values)]
 
 
@@ -184,8 +224,9 @@ def run_steps(run, events):
     return result
 
 
-def variant_steps(row, run, events, evals, heals, critique):
+def variant_steps(row, run, events, evals, heals, critique, *, siblings=()):
     lane = row["variant"]
+    all_events = events
     events = [e for e in events if e["variant"] == lane]
     terminal = run["status"] != "RUNNING" or row["status"] != "RUNNING"
     code_logs = [e for e in events if e["stage"] == "worker"]
@@ -237,6 +278,16 @@ def variant_steps(row, run, events, evals, heals, critique):
     by_number = {e["number"]: e for e in evals}
     harness_started = any(e["stage"] == "eval" and e["status"] == "started" for e in events)
     completed = computation_complete(row, events)
+    recovered = {} if terminal else recover_evaluations(row)
+    granular = any(
+        e["stage"] == "eval" and e["data"].get("eval") is not None and e["status"] == "started"
+        for e in events
+    )
+    waiting = [
+        s["variant"]
+        for s in siblings
+        if s["status"] == "RUNNING" and not computation_complete(s, all_events)
+    ]
     for number in range(1, 6):
         logs = [
             e
@@ -249,15 +300,43 @@ def variant_steps(row, run, events, evals, heals, critique):
         if result:
             state = "pass" if result["passed"] else "failed"
             details = metric_details(result)
+        elif number in recovered:
+            item = recovered[number]
+            state = "pass" if item["result"]["passed"] else "failed"
+            details = item.get("details") or metric_details(item["result"])[1:] + [
+                item["provenance"]
+            ]
         else:
             if terminal:
                 state, details = "not_run", ["No completed eval result was recorded."]
-            elif completed:
+            elif any(e["status"] == "started" for e in logs):
+                state = "running"
+                details = [logs[-1]["message"]]
+            elif number == 5 and (completed or any(e["number"] == 4 for e in evals)):
                 state = "awaiting_judgment"
-                details = ["Computation complete; awaiting final judgment"]
-            elif harness_started:
+                details = [
+                    f"Waiting for {', '.join(waiting)} to finish its checks."
+                    if waiting
+                    else "Waiting for the shared trial cohort to be assembled.",
+                    "Eval 5 compares all eligible trials together. "
+                    "Results from Evals 1–4 are available independently.",
+                ]
+            elif completed:
+                state = "recorded"
+                details = [
+                    "Computation finished, but this older runner has not published "
+                    "this eval's detailed outcome.",
+                    "The running process remains untouched; its retained report "
+                    "will appear when it publishes.",
+                ]
+            elif harness_started and not granular:
                 state = "awaiting_results"
-                details = ["Harness active; individual outcomes not yet published."]
+                details = [
+                    "This run started before per-eval streaming; "
+                    "its current individual check is not reported.",
+                    "The harness is active. Saved results appear here "
+                    "as evidence becomes available.",
+                ]
             else:
                 state, details = "pending", []
         steps.append(
@@ -321,7 +400,12 @@ def lane_evidence(row, run, records, *, include_voided=False, events=None):
         "critiques", run_id=row["run_id"], variant=row["variant"], include_voided=include_voided
     )
     critique = critiques[-1]["text"] if critiques else row.get("critique")
-    steps = variant_steps(row, run, events, evals, heals, critique)
+    siblings = (
+        records.list("variants", run_id=row["run_id"], include_voided=include_voided)
+        if run["status"] == "RUNNING"
+        else ()
+    )
+    steps = variant_steps(row, run, events, evals, heals, critique, siblings=siblings)
     return evals, heals, critique, steps
 
 

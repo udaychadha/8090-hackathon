@@ -13,16 +13,9 @@ def test_protected_hashes_match_only_authorized_eval_revision():
     }
     assert current == proof["sha256"]
     changed = {name for name, digest in current.items() if digest != proof["previous_sha256"][name]}
-    assert (
-        changed
-        == set(proof["authorized_changes"])
-        == {
-            "factory/contract.py",
-            "factory/evals/lookahead.py",
-            "factory/evals/runner.py",
-        }
-    )
+    assert changed == set(proof["authorized_changes"]) == {"factory/evals/runner.py"}
     for name in ("factory/evals/config.py", "factory/evals/decay.py", "factory/evals/deflated.py"):
         assert current[name] == proof["previous_sha256"][name]
-    assert proof["previous_revision"]["revision"] == "2026-11-14-eval45-global-v2"
+    assert proof["revision"] == "2026-11-14-live-eval-publication-v1"
+    assert proof["previous_revision"]["revision"] == "2026-11-14-wo12-events-v1"
     assert proof["previous_revision"]["sha256"] == proof["previous_sha256"]

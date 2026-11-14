@@ -35,6 +35,7 @@ import {
   Unavailable,
   VariantCard,
   VariantStatus,
+  availableEvalCount,
 } from "../components/common";
 
 export function RunPage() {
@@ -117,6 +118,7 @@ export function RunPage() {
                           >
                             <Chip>
                               {v.variant} · {v.test_type} · {v.evals_passed}/5
+                              passed
                             </Chip>
                             <StatusPill status={v.status} />
                           </Link>
@@ -182,6 +184,7 @@ function RunDetailPage({
   const [eventError, setEventError] = useState<string | null>(null);
   const [streamState, setStreamState] = useState("Loading event history…");
   const [lane, setLane] = useState("overview");
+  const [selectedStep, setSelectedStep] = useState<string | null>(null);
   const cursor = useRef(0);
   const refresh = useRef<ReturnType<typeof setTimeout> | null>(null);
   const run = resource.data;
@@ -355,7 +358,10 @@ function RunDetailPage({
                   key={letter}
                   role="tab"
                   aria-selected={lane === letter}
-                  onClick={() => setLane(letter)}
+                  onClick={() => {
+                    setSelectedStep(null);
+                    setLane(letter);
+                  }}
                 >
                   <strong>
                     {letter}　{laneNames[letter]}
@@ -363,7 +369,10 @@ function RunDetailPage({
                   {v ? (
                     <>
                       <span className="caption">
-                        {v.test_type} · {v.evals_passed}/5
+                        {v.test_type} · {v.evals_passed}/5 passed
+                      </span>
+                      <span className="caption">
+                        {availableEvalCount(v.steps)}/5 results available
                       </span>
                       <VariantStatus variant={v} parentStatus={run.status} />
                     </>
@@ -384,7 +393,14 @@ function RunDetailPage({
                   variant={v}
                   parentStatus={run.status}
                   audit={audit}
-                  onSelect={() => setLane(v.variant)}
+                  onSelect={() => {
+                    setSelectedStep(null);
+                    setLane(v.variant);
+                  }}
+                  onSelectStep={(id) => {
+                    setSelectedStep(id);
+                    setLane(v.variant);
+                  }}
                 />
               ))}
               {!run.variants.length && (
@@ -402,9 +418,10 @@ function RunDetailPage({
                 </section>
               )}
               <p className="caption">
-                One idea, three implementations. Each dot is one of the five
-                evals, in order. Only recorded harness results establish a pass
-                or failure.
+                Results appear as each check finishes. Recovered outcomes
+                identify their stored evidence; missing results remain
+                unpublished. Click an evaluation to inspect its details and
+                logs.
               </p>
               {run.steps.length > 0 && (
                 <section className="card">
@@ -417,6 +434,7 @@ function RunDetailPage({
             <>
               <VariantCard
                 variant={selected}
+                onSelectStep={setSelectedStep}
                 parentStatus={run.status}
                 audit={audit}
               />
@@ -426,7 +444,11 @@ function RunDetailPage({
                   Bug-only repairs are bounded to three attempts. Performance
                   failures are final.
                 </p>
-                <StepPipeline steps={selected.steps} />
+                <StepPipeline
+                  steps={selected.steps}
+                  selectedId={selectedStep}
+                  onSelect={setSelectedStep}
+                />
               </section>
             </>
           ) : (

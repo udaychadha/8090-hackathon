@@ -264,7 +264,7 @@ def variant_detail(request: Request, variant_id: str, include_voided: bool = Fal
                     "passed": e["passed"],
                     "metrics": e["metrics"],
                 }
-                for e in evals
+                for e in views.display_evaluations(row, run, evals)
             ],
             "heal_attempts": [
                 {key: h.get(key) for key in schemas.HealView.model_fields} for h in heals

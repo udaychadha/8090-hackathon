@@ -1,0 +1,134 @@
+{
+  "variant_id": "r_587be5f49c30_A",
+  "checks": [
+    {
+      "width": 1440,
+      "theme": "dark",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440
+      },
+      "evals": [
+        1,
+        2,
+        4
+      ],
+      "unpublished_eval3": "Details not published",
+      "eval5": "Waiting for C to finish",
+      "passed_count": 1
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440
+      },
+      "evals": [
+        1,
+        2,
+        4
+      ],
+      "unpublished_eval3": "Details not published",
+      "eval5": "Waiting for C to finish",
+      "passed_count": 1
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "layout": {
+        "width": 390,
+        "scroll": 390
+      },
+      "evals": [
+        1,
+        2,
+        4
+      ],
+      "unpublished_eval3": "Details not published",
+      "eval5": "Waiting for C to finish",
+      "passed_count": 1
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "layout": {
+        "width": 390,
+        "scroll": 390
+      },
+      "evals": [
+        1,
+        2,
+        4
+      ],
+      "unpublished_eval3": "Details not published",
+      "eval5": "Waiting for C to finish",
+      "passed_count": 1
+    }
+  ],
+  "errors": [],
+  "writes": [],
+  "screenshots": [
+    "desktop-dark-tearsheet-A.png",
+    "desktop-light-tearsheet-A.png",
+    "mobile-dark-tearsheet-A.png",
+    "mobile-light-tearsheet-A.png"
+  ],
+  "evals": [
+    {
+      "n": 1,
+      "name": "lookahead",
+      "passed": true,
+      "metrics": {
+        "reason": "Lookahead passed: the runner recorded entry into Eval 2. Recovered from the recorded milestone. Individual cut details have not been published by this older runner.",
+        "evidence_source": "recovered_from_saved_evidence"
+      }
+    },
+    {
+      "n": 2,
+      "name": "friction",
+      "passed": false,
+      "metrics": {
+        "sharpe_by_bps": {
+          "0": 0.10275092984259679,
+          "2": 0.08118554980641492,
+          "5": 0.04882563317971344,
+          "10": -0.00513184924410427
+        },
+        "min_sharpe": 0.5,
+        "pass_bps": 5,
+        "break_even_bps": null,
+        "break_even_note": "below 0.5 at 0 bps",
+        "reason": "Recovered from the saved IS cost grid; original detailed eval record is pending publication.",
+        "evidence_source": "recovered_from_saved_evidence"
+      }
+    },
+    {
+      "n": 4,
+      "name": "decay",
+      "passed": false,
+      "metrics": {
+        "min_ratio": 0.5,
+        "cost_bps": 5,
+        "is_sharpe": 0.04882563317969828,
+        "oos_sharpe": -0.4939844320984896,
+        "oos_to_is_ratio": -10.117317481176846,
+        "sharpe_ok": false,
+        "is_max_window_share": 2.4197334428507897,
+        "is_total_pnl": 0.008952664628433915,
+        "oos_total_pnl": -0.023152115422884312,
+        "oos_max_window_share": null,
+        "window_days": 5,
+        "max_share": 0.6,
+        "concentration_ok": false,
+        "is_days": 1639,
+        "oos_days": 546,
+        "reason": "Recovered from complete saved daily equity; reconstructed IS/OOS Sharpes match the saved cost grid. No strategy rerun.",
+        "evidence_source": "recovered_from_saved_evidence"
+      }
+    }
+  ],
+  "evals_passed": 1,
+  "passed": true,
+  "finished_at": "2026-11-14T22:40:45.163Z"
+}

@@ -104,7 +104,7 @@ describe("evidence presentation", () => {
     expect(screen.getByLabelText("Eval 2: failed")).toBeInTheDocument();
     expect(screen.getByLabelText("Eval 3: not recorded")).toBeInTheDocument();
     expect(screen.getByLabelText("Eval 4: pass")).toBeInTheDocument();
-    expect(screen.getByText("2/5")).toBeInTheDocument();
+    expect(screen.getByText("2/5 passed")).toBeInTheDocument();
   });
   it("does not color a completed run as verified", () => {
     render(<StatusPill status="COMPLETED" />);

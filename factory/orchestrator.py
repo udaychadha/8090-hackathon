@@ -18,7 +18,7 @@ from factory.contract import InactiveStrategy, StrategySpec
 from factory.data import DataError, load_bars
 from factory.data_contract.prompts import worker_context
 from factory.evals.runner import with_deflated
-from factory.evaluation import evaluate_file
+from factory.evaluation import evaluate_file, evaluation_progress
 from factory.gross_diagnostics import diagnostics_for_status, pending_diagnostics
 from factory.llm import LLMError, model_for
 from factory.trials import trial_cohort
@@ -287,7 +287,25 @@ def run_paper(
                         row["reached_eval_2"] = True
                         _save_row(records, row)
 
-                    evaluation = evaluate_file(path, data_root, on_eval2_started=mark_eval2_started)
+                    def publish_progress(number, status, message, result, row=row):
+                        if result is not None:
+                            _record_eval_result(records, row, result)
+                        else:
+                            records.event(
+                                run_id,
+                                "eval",
+                                status,
+                                message,
+                                variant=row["variant"],
+                                data={"eval": number},
+                            )
+
+                    with evaluation_progress(publish_progress):
+                        evaluation = evaluate_file(
+                            path,
+                            data_root,
+                            on_eval2_started=mark_eval2_started,
+                        )
                     records.event(
                         run_id,
                         "eval",
@@ -298,6 +316,15 @@ def run_paper(
                     )
                     reports[variant] = evaluation.report
                     gross_by_variant[variant] = evaluation.gross_diagnostics
+                    records.event(
+                        run_id,
+                        "eval",
+                        "info",
+                        "Eval 5 pending: waiting for all candidate outcomes "
+                        "to form the shared trial cohort",
+                        variant=variant,
+                        data={"eval": 5},
+                    )
                     row["equity"] = evaluation.equity
                     row["equity_boundaries"] = evaluation.boundaries
                     row["activity"] = evaluation.activity
@@ -329,6 +356,14 @@ def run_paper(
             {rows[v]["variant_id"]: report.oos_daily_sharpe for v, report in reports.items()},
         )
         for variant, report in reports.items():
+            records.event(
+                run_id,
+                "eval",
+                "started",
+                "Eval 5 started with the shared trial cohort",
+                variant=variant,
+                data={"eval": 5},
+            )
             report = with_deflated(report, trials, trial_variant_ids=trial_ids)
             row = rows[variant]
             row.update(
@@ -351,6 +386,13 @@ def run_paper(
             )
             rows[variant] = _save_row(records, row)
             for number, result in report.results.items():
+                recorded = records.get("eval_results", f"{run_id}_{variant}_{number}")
+                if recorded is not None:
+                    if {
+                        key: recorded[key] for key in ("number", "name", "passed", "metrics")
+                    } != records.safe(result.to_dict()):
+                        raise ValueError("Previously published evaluation evidence changed")
+                    continue
                 records.put(
                     "eval_results",
                     f"{run_id}_{variant}_{number}",
@@ -472,6 +514,47 @@ def _save_row(records, row):
     row["default_status"] = row["status"]
     row["default_evals_passed"] = row["evals_passed"]
     return records.put("variants", row["variant_id"], row["run_id"], row)
+
+
+def _record_eval_result(records, row, result):
+    """Atomically retain an exact completed result, count and replayable event."""
+    evidence = records.safe(result.to_dict())
+    if result.number not in (1, 2, 3, 4):
+        raise ValueError("Only independent evals can publish before the shared cohort")
+    values = {item["number"]: item for item in row.get("evals", [])}
+    if result.number in values and values[result.number] != evidence:
+        raise ValueError("Completed evaluation evidence cannot be replaced")
+    values[result.number] = evidence
+    updated = {
+        **row,
+        "evals": [values[n] for n in sorted(values)],
+        "evals_passed": sum(item["passed"] for item in values.values()),
+        "default_status": row["status"],
+        "default_evals_passed": sum(item["passed"] for item in values.values()),
+    }
+    identifier = f"{row['variant_id']}_{result.number}"
+    with records.lock, records.db:
+        records.db.execute("BEGIN IMMEDIATE")
+        saved = records._prepared("variants", row["variant_id"], row["run_id"], updated)
+        persisted = records._prepared(
+            "eval_results",
+            identifier,
+            row["run_id"],
+            {"variant": row["variant"], **evidence},
+        )
+        event = records._event_value(
+            row["run_id"],
+            "eval",
+            "passed" if result.passed else "failed",
+            f"Eval {result.number} {'passed' if result.passed else 'failed'}",
+            variant=row["variant"],
+            data={"eval": result.number, **result.metrics},
+        )
+        records._write("variants", row["variant_id"], saved)
+        records._write("eval_results", identifier, persisted)
+        records._write("events", event["seq"], event)
+    row.update(saved)
+    records._mirror()
 
 
 def _finish(records, summary, rows, usages, started):

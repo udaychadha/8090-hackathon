@@ -428,6 +428,19 @@ export function TearsheetPage() {
             <tbody>
               {[1, 2, 3, 4, 5].map((n) => {
                 const result = variant.evals.find((e) => e.n === n);
+                const step = variant.steps.find(
+                  (s) => s.kind === "eval" && s.number === n,
+                );
+                const unpublishedState =
+                  step?.state === "recorded"
+                    ? "Details not published"
+                    : step?.state === "awaiting_results"
+                      ? "Not published"
+                      : step?.state === "awaiting_judgment"
+                        ? "Waiting for trials"
+                        : step
+                          ? human(step.state)
+                          : "Not run / not recorded";
                 return (
                   <tr key={n}>
                     <td>
@@ -456,7 +469,7 @@ export function TearsheetPage() {
                         ? result.passed
                           ? "✓ pass"
                           : "× failed"
-                        : "Not run / not recorded"}
+                        : unpublishedState}
                     </td>
                     <td>
                       {result ? (
@@ -472,9 +485,13 @@ export function TearsheetPage() {
                           </details>
                         </div>
                       ) : (
-                        <span className="muted">
-                          No completed harness result
-                        </span>
+                        <div className="muted">
+                          {step?.details.length
+                            ? step.details.map((line, index) => (
+                                <p key={index}>{line}</p>
+                              ))
+                            : "No completed harness result"}
+                        </div>
                       )}
                     </td>
                   </tr>

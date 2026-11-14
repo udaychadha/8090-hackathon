@@ -141,3 +141,13 @@ desktop/mobile screenshots in both themes. The browser made no write requests.
 The correction passed 42 targeted backend tests, all 42 frontend tests, the
 production frontend build, formatting and lint. Eval config's protected hash is
 unchanged. These checks establish the progress fix, not experiment completion.
+
+## Owner correction: publish each eval independently
+
+The owner rejected the preceding label-only change. It is superseded by the
+per-eval result work in `report/LIVE-EVAL-PROGRESS.md`: five clickable result
+rows, immediately published completed evals for new runs, and explicitly
+labelled recovery from saved metrics for the uninterrupted legacy run.
+The current HTTP API is exec session `55255` on port 8000. The original arena
+PID `65120`, Congress gross PID `70729` and paused historical gross PID `68120`
+remain unchanged. The resumption order and no-new-dataset guard above still apply.

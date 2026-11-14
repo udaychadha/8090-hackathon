@@ -85,6 +85,8 @@ def evaluate(
     *,
     trial_sharpes: Sequence[float | None] | None = None,
     on_eval2_started: Callable[[], None] | None = None,
+    on_eval_started: Callable[[int], None] | None = None,
+    on_eval_result: Callable[[EvalResult], None] | None = None,
 ) -> EvalReport:
     """Run Evals 1–5. Later evals still run after a failure, for the tearsheet.
 
@@ -99,17 +101,31 @@ def evaluate(
         now = time.perf_counter()
         seconds[name], clock = now - clock, now
 
+    if on_eval_started is not None:
+        on_eval_started(1)
     results[1], is_weights = lookahead_eval(run, is_bars)
+    if on_eval_result is not None:
+        on_eval_result(results[1])
     lap("eval_1")
     if on_eval2_started is not None:
         on_eval2_started()
+    if on_eval_started is not None:
+        on_eval_started(2)
     results[2] = friction_eval(is_bars, is_weights, frequency)
+    if on_eval_result is not None:
+        on_eval_result(results[2])
     lap("eval_2")
     is_base = backtest(
         is_bars, is_weights, frequency=frequency, round_trip_bps=config.BASE_COST_BPS
     )
+    if on_eval_started is not None:
+        on_eval_started(3)
     results[3] = sensitivity_eval(run, is_bars, params, frequency, is_base.metrics.sharpe)
+    if on_eval_result is not None:
+        on_eval_result(results[3])
     lap("eval_3")
+    if on_eval_started is not None:
+        on_eval_started(4)
     joined = type(is_bars)()
     for symbol, frame in is_bars.items():
         if (
@@ -124,6 +140,8 @@ def evaluate(
         oos_bars, oos_weights, frequency=frequency, round_trip_bps=config.BASE_COST_BPS
     )
     results[4] = decay_eval(is_base.daily_returns, oos_base.daily_returns)
+    if on_eval_result is not None:
+        on_eval_result(results[4])
     lap("eval_4")
     own = daily_sharpe(oos_base.daily_returns)
     report = EvalReport(results, seconds, oos_base.daily_returns, own)

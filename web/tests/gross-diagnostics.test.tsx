@@ -174,3 +174,85 @@ it.each([
     expect(region.querySelector(".verified-text, .status.verified")).toBeNull();
   },
 );
+
+it("uses live step evidence for unpublished tearsheet evals without replacing completed results", async () => {
+  vi.spyOn(api, "variant").mockResolvedValue({
+    ...variant,
+    status: "RUNNING",
+    evals: [
+      {
+        n: 2,
+        name: "Friction",
+        passed: false,
+        metrics: {
+          sharpe_by_bps: { "5": 0.049 },
+          pass_bps: 5,
+          min_sharpe: 0.5,
+        },
+      },
+    ],
+    steps: [
+      {
+        number: 1,
+        state: "awaiting_results" as const,
+        details: [
+          "Legacy runner does not report its current individual check.",
+        ],
+      },
+      {
+        number: 2,
+        state: "pending" as const,
+        details: ["Stale step fallback must not replace actual result."],
+      },
+      {
+        number: 3,
+        state: "recorded" as const,
+        details: [
+          "Computation finished; sensitivity details have not been published.",
+        ],
+      },
+      {
+        number: 5,
+        state: "awaiting_judgment" as const,
+        details: [
+          "Waiting for C to finish its checks.",
+          "Eval 5 compares all eligible trials together.",
+        ],
+      },
+    ].map((s) => ({
+      ...s,
+      id: `eval-${s.number}`,
+      kind: "eval" as const,
+      label: `Eval ${s.number}`,
+      attempts: 0,
+      max_attempts: null,
+      logs: [],
+    })),
+  });
+  render(
+    <MemoryRouter>
+      <TearsheetPage />
+    </MemoryRouter>,
+  );
+  const row = (n: number) => screen.getAllByRole("row")[n];
+  await screen.findByRole("heading", { name: "Strategy evals" });
+  expect(row(1)).toHaveTextContent("Not published");
+  expect(row(1)).toHaveTextContent(
+    "Legacy runner does not report its current individual check.",
+  );
+  expect(row(2)).toHaveTextContent("× failed");
+  expect(row(2)).toHaveTextContent("0.049");
+  expect(row(2)).not.toHaveTextContent("Stale step fallback");
+  expect(row(3)).toHaveTextContent("Details not published");
+  expect(row(3)).toHaveTextContent(
+    "Computation finished; sensitivity details have not been published.",
+  );
+  expect(row(5)).toHaveTextContent("Waiting for trials");
+  expect(row(5)).toHaveTextContent("Waiting for C to finish its checks.");
+  expect(row(5)).toHaveTextContent(
+    "Eval 5 compares all eligible trials together.",
+  );
+  for (const n of [1, 3, 5])
+    expect(row(n)).not.toHaveTextContent("Not run / not recorded");
+  expect(row(4)).toHaveTextContent("Not run / not recorded");
+});

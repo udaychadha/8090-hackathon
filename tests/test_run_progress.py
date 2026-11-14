@@ -47,13 +47,16 @@ def eval_steps(value, *, events=None, run_status="RUNNING", evals=None):
     ]
 
 
-def test_legacy_completed_artifacts_show_judgment_wait_without_changing_verdict():
+def test_legacy_completion_does_not_hide_individual_unpublished_outcomes():
     value = row(complete=True)
     steps = eval_steps(value, events=[event()])
-    assert {step["state"] for step in steps} == {"awaiting_judgment"}
-    assert all("Computation complete; awaiting final judgment" in step["details"] for step in steps)
+    assert [step["state"] for step in steps] == ["recorded"] * 4 + ["awaiting_judgment"]
+    assert all("not published" in " ".join(step["details"]) for step in steps[:4])
     projected = leaderboard_row(value)
-    assert projected["summary"] == "Computation complete; awaiting final judgment."
+    assert (
+        projected["summary"]
+        == "Checks finished; this older runner has not published individual outcomes yet."
+    )
     assert projected["status"] == "RUNNING" and projected["evals_passed"] == 0
 
 
@@ -61,8 +64,7 @@ def test_generic_harness_start_means_unpublished_results_not_five_running_checks
     steps = eval_steps(row(), events=[event()])
     assert {step["state"] for step in steps} == {"awaiting_results"}
     assert all(
-        step["details"] == ["Harness active; individual outcomes not yet published."]
-        for step in steps
+        "current individual check is not reported" in " ".join(step["details"]) for step in steps
     )
     assert {step["state"] for step in eval_steps(row())} == {"pending"}
 
@@ -85,7 +87,7 @@ def test_partial_artifacts_do_not_prove_computation_complete(partial):
 def test_explicit_completion_event_is_lane_scoped_and_does_not_publish_outcomes():
     completion = event(COMPLETED, "info")
     steps = eval_steps(row(), events=[completion])
-    assert {step["state"] for step in steps} == {"awaiting_judgment"}
+    assert [step["state"] for step in steps] == ["recorded"] * 4 + ["awaiting_judgment"]
     assert {
         step["state"] for step in eval_steps(row(), events=[{**completion, "variant": "B"}])
     } == {"pending"}
@@ -128,10 +130,13 @@ def test_http_progress_distinguishes_finished_lanes_from_queued_lane(tmp_path):
         variants = result.json()["variants"]
         assert result.json()["status"] == "RUNNING"
         for value in variants[:2]:
-            assert value["summary"] == "Computation complete; awaiting final judgment."
-            assert {s["state"] for s in value["steps"] if s["kind"] == "eval"} == {
-                "awaiting_judgment"
-            }
+            assert (
+                value["summary"]
+                == "Checks finished; this older runner has not published individual outcomes yet."
+            )
+            assert [s["state"] for s in value["steps"] if s["kind"] == "eval"] == [
+                "recorded"
+            ] * 4 + ["awaiting_judgment"]
             assert value["status"] == "RUNNING" and value["evals_passed"] == 0
         assert {s["state"] for s in variants[2]["steps"] if s["kind"] == "eval"} == {"pending"}
         for route in ("/api/leaderboard", "/api/variants/r_progress_B"):
@@ -141,7 +146,10 @@ def test_http_progress_distinguishes_finished_lanes_from_queued_lane(tmp_path):
                 if "rows" in payload
                 else payload
             )
-            assert selected["summary"] == "Computation complete; awaiting final judgment."
+            assert (
+                selected["summary"]
+                == "Checks finished; this older runner has not published individual outcomes yet."
+            )
         with Records(tmp_path / "runs") as records:
             run = records.get("runs", "r_progress")
             records.put("runs", "r_progress", "r_progress", {**run, "status": "FAILED"})

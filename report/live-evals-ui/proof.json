@@ -1,0 +1,1175 @@
+{
+  "started_at": "2026-11-14T22:35:03.582Z",
+  "run_id": "r_587be5f49c30",
+  "data_source": "actual API; no interception",
+  "checks": [
+    {
+      "label": "desktop dark overview",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440,
+        "cards": [
+          {
+            "height": 712,
+            "width": 956
+          },
+          {
+            "height": 735,
+            "width": 956
+          },
+          {
+            "height": 660,
+            "width": 956
+          }
+        ],
+        "rows": [
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "desktop dark A eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop dark A eval2",
+      "state": "failed",
+      "detail_lines_matched": 3
+    },
+    {
+      "label": "desktop dark A eval3",
+      "state": "recorded",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop dark A eval4",
+      "state": "failed",
+      "detail_lines_matched": 6
+    },
+    {
+      "label": "desktop dark A eval5",
+      "state": "awaiting_judgment",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop dark A details",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440,
+        "cards": [
+          {
+            "height": 712,
+            "width": 956
+          }
+        ],
+        "rows": [
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "desktop dark B eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop dark B eval2",
+      "state": "failed",
+      "detail_lines_matched": 3
+    },
+    {
+      "label": "desktop dark B eval3",
+      "state": "failed",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop dark B eval4",
+      "state": "failed",
+      "detail_lines_matched": 6
+    },
+    {
+      "label": "desktop dark B eval5",
+      "state": "awaiting_judgment",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop dark B details",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440,
+        "cards": [
+          {
+            "height": 735,
+            "width": 956
+          }
+        ],
+        "rows": [
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "desktop dark C eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop dark C details",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440,
+        "cards": [
+          {
+            "height": 660,
+            "width": 956
+          }
+        ],
+        "rows": [
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "desktop light overview",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440,
+        "cards": [
+          {
+            "height": 712,
+            "width": 956
+          },
+          {
+            "height": 735,
+            "width": 956
+          },
+          {
+            "height": 660,
+            "width": 956
+          }
+        ],
+        "rows": [
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "desktop light A eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop light A eval2",
+      "state": "failed",
+      "detail_lines_matched": 3
+    },
+    {
+      "label": "desktop light A eval3",
+      "state": "recorded",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop light A eval4",
+      "state": "failed",
+      "detail_lines_matched": 6
+    },
+    {
+      "label": "desktop light A eval5",
+      "state": "awaiting_judgment",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop light A details",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440,
+        "cards": [
+          {
+            "height": 712,
+            "width": 956
+          }
+        ],
+        "rows": [
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "desktop light B eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop light B eval2",
+      "state": "failed",
+      "detail_lines_matched": 3
+    },
+    {
+      "label": "desktop light B eval3",
+      "state": "failed",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop light B eval4",
+      "state": "failed",
+      "detail_lines_matched": 6
+    },
+    {
+      "label": "desktop light B eval5",
+      "state": "awaiting_judgment",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop light B details",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440,
+        "cards": [
+          {
+            "height": 735,
+            "width": 956
+          }
+        ],
+        "rows": [
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "desktop light C eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "desktop light C details",
+      "layout": {
+        "width": 1440,
+        "scroll": 1440,
+        "cards": [
+          {
+            "height": 660,
+            "width": 956
+          }
+        ],
+        "rows": [
+          {
+            "height": 84,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "mobile dark overview",
+      "layout": {
+        "width": 390,
+        "scroll": 390,
+        "cards": [
+          {
+            "height": 998,
+            "width": 358
+          },
+          {
+            "height": 1045,
+            "width": 358
+          },
+          {
+            "height": 976,
+            "width": 358
+          }
+        ],
+        "rows": [
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "mobile dark A eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile dark A eval2",
+      "state": "failed",
+      "detail_lines_matched": 3
+    },
+    {
+      "label": "mobile dark A eval3",
+      "state": "recorded",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile dark A eval4",
+      "state": "failed",
+      "detail_lines_matched": 6
+    },
+    {
+      "label": "mobile dark A eval5",
+      "state": "awaiting_judgment",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile dark A details",
+      "layout": {
+        "width": 390,
+        "scroll": 390,
+        "cards": [
+          {
+            "height": 998,
+            "width": 358
+          }
+        ],
+        "rows": [
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "mobile dark B eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile dark B eval2",
+      "state": "failed",
+      "detail_lines_matched": 3
+    },
+    {
+      "label": "mobile dark B eval3",
+      "state": "failed",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile dark B eval4",
+      "state": "failed",
+      "detail_lines_matched": 6
+    },
+    {
+      "label": "mobile dark B eval5",
+      "state": "awaiting_judgment",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile dark B details",
+      "layout": {
+        "width": 390,
+        "scroll": 390,
+        "cards": [
+          {
+            "height": 1045,
+            "width": 358
+          }
+        ],
+        "rows": [
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "mobile dark C eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile dark C details",
+      "layout": {
+        "width": 390,
+        "scroll": 390,
+        "cards": [
+          {
+            "height": 976,
+            "width": 358
+          }
+        ],
+        "rows": [
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "mobile light overview",
+      "layout": {
+        "width": 390,
+        "scroll": 390,
+        "cards": [
+          {
+            "height": 998,
+            "width": 358
+          },
+          {
+            "height": 1045,
+            "width": 358
+          },
+          {
+            "height": 976,
+            "width": 358
+          }
+        ],
+        "rows": [
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "mobile light A eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile light A eval2",
+      "state": "failed",
+      "detail_lines_matched": 3
+    },
+    {
+      "label": "mobile light A eval3",
+      "state": "recorded",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile light A eval4",
+      "state": "failed",
+      "detail_lines_matched": 6
+    },
+    {
+      "label": "mobile light A eval5",
+      "state": "awaiting_judgment",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile light A details",
+      "layout": {
+        "width": 390,
+        "scroll": 390,
+        "cards": [
+          {
+            "height": 998,
+            "width": 358
+          }
+        ],
+        "rows": [
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "mobile light B eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile light B eval2",
+      "state": "failed",
+      "detail_lines_matched": 3
+    },
+    {
+      "label": "mobile light B eval3",
+      "state": "failed",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile light B eval4",
+      "state": "failed",
+      "detail_lines_matched": 6
+    },
+    {
+      "label": "mobile light B eval5",
+      "state": "awaiting_judgment",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile light B details",
+      "layout": {
+        "width": 390,
+        "scroll": 390,
+        "cards": [
+          {
+            "height": 1045,
+            "width": 358
+          }
+        ],
+        "rows": [
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 60,
+            "overflow": false
+          }
+        ]
+      }
+    },
+    {
+      "label": "mobile light C eval1",
+      "state": "pass",
+      "detail_lines_matched": 2
+    },
+    {
+      "label": "mobile light C details",
+      "layout": {
+        "width": 390,
+        "scroll": 390,
+        "cards": [
+          {
+            "height": 976,
+            "width": 358
+          }
+        ],
+        "rows": [
+          {
+            "height": 102,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          },
+          {
+            "height": 78,
+            "overflow": false
+          }
+        ]
+      }
+    }
+  ],
+  "screenshots": [
+    "report/live-evals-ui/desktop-dark-overview-A.png",
+    "report/live-evals-ui/desktop-dark-A-eval2.png",
+    "report/live-evals-ui/desktop-dark-A-eval3.png",
+    "report/live-evals-ui/desktop-dark-A-eval5.png",
+    "report/live-evals-ui/desktop-light-overview-A.png",
+    "report/live-evals-ui/desktop-light-A-eval2.png",
+    "report/live-evals-ui/desktop-light-A-eval3.png",
+    "report/live-evals-ui/desktop-light-A-eval5.png",
+    "report/live-evals-ui/mobile-dark-overview-A.png",
+    "report/live-evals-ui/mobile-dark-A-eval2.png",
+    "report/live-evals-ui/mobile-dark-A-eval3.png",
+    "report/live-evals-ui/mobile-dark-A-eval5.png",
+    "report/live-evals-ui/mobile-light-overview-A.png",
+    "report/live-evals-ui/mobile-light-A-eval2.png",
+    "report/live-evals-ui/mobile-light-A-eval3.png",
+    "report/live-evals-ui/mobile-light-A-eval5.png"
+  ],
+  "writes": [],
+  "errors": [],
+  "variants": [
+    {
+      "variant_id": "r_587be5f49c30_A",
+      "variant": "A",
+      "status": "RUNNING",
+      "evals_passed": 1,
+      "summary": "Eval 2 (Friction) failed; 3/5 results available. Remaining checks continue.",
+      "steps": [
+        {
+          "number": 1,
+          "label": "1. Lookahead",
+          "state": "pass",
+          "details": [
+            "Lookahead passed: the runner recorded entry into Eval 2.",
+            "Recovered from the recorded milestone. Individual cut details have not been published by this older runner."
+          ]
+        },
+        {
+          "number": 2,
+          "label": "2. Friction",
+          "state": "failed",
+          "details": [
+            "Net Sharpe at 5 bps: 0.049.",
+            "Break-even cost: below 0.5 at 0 bps.",
+            "Recovered from the saved IS cost grid; original detailed eval record is pending publication."
+          ]
+        },
+        {
+          "number": 3,
+          "label": "3. Sensitivity",
+          "state": "recorded",
+          "details": [
+            "Computation finished, but this older runner has not published this eval's detailed outcome.",
+            "The running process remains untouched; its retained report will appear when it publishes."
+          ]
+        },
+        {
+          "number": 4,
+          "label": "4. Decay",
+          "state": "failed",
+          "details": [
+            "IS Sharpe: 0.049.",
+            "OOS Sharpe: -0.494.",
+            "OOS/IS Sharpe ratio: -10.117.",
+            "IS concentration share: 2.420.",
+            "OOS concentration share: not applicable or unavailable (fails).",
+            "Recovered from complete saved daily equity; reconstructed IS/OOS Sharpes match the saved cost grid. No strategy rerun."
+          ]
+        },
+        {
+          "number": 5,
+          "label": "5. Deflated Sharpe",
+          "state": "awaiting_judgment",
+          "details": [
+            "Waiting for C to finish its checks.",
+            "Eval 5 compares all eligible trials together. Results from Evals 1–4 are available independently."
+          ]
+        }
+      ]
+    },
+    {
+      "variant_id": "r_587be5f49c30_B",
+      "variant": "B",
+      "status": "RUNNING",
+      "evals_passed": 1,
+      "summary": "Eval 2 (Friction) failed; 4/5 results available. Remaining checks continue.",
+      "steps": [
+        {
+          "number": 1,
+          "label": "1. Lookahead",
+          "state": "pass",
+          "details": [
+            "Lookahead passed: the runner recorded entry into Eval 2.",
+            "Recovered from the recorded milestone. Individual cut details have not been published by this older runner."
+          ]
+        },
+        {
+          "number": 2,
+          "label": "2. Friction",
+          "state": "failed",
+          "details": [
+            "Net Sharpe at 5 bps: -0.037.",
+            "Break-even cost: below 0.5 at 0 bps.",
+            "Recovered from the saved IS cost grid; original detailed eval record is pending publication."
+          ]
+        },
+        {
+          "number": 3,
+          "label": "3. Sensitivity",
+          "state": "failed",
+          "details": [
+            "Base IS Sharpe at 5 bps: -0.037; sensitivity requires a positive base.",
+            "Failure follows from the saved base Sharpe. Jitter measurements have not been published; none are inferred."
+          ]
+        },
+        {
+          "number": 4,
+          "label": "4. Decay",
+          "state": "failed",
+          "details": [
+            "IS Sharpe: -0.037.",
+            "OOS Sharpe: -0.721.",
+            "OOS/IS Sharpe ratio is undefined.",
+            "IS concentration share: not applicable or unavailable (fails).",
+            "OOS concentration share: not applicable or unavailable (fails).",
+            "Recovered from complete saved daily equity; reconstructed IS/OOS Sharpes match the saved cost grid. No strategy rerun."
+          ]
+        },
+        {
+          "number": 5,
+          "label": "5. Deflated Sharpe",
+          "state": "awaiting_judgment",
+          "details": [
+            "Waiting for C to finish its checks.",
+            "Eval 5 compares all eligible trials together. Results from Evals 1–4 are available independently."
+          ]
+        }
+      ]
+    },
+    {
+      "variant_id": "r_587be5f49c30_C",
+      "variant": "C",
+      "status": "RUNNING",
+      "evals_passed": 1,
+      "summary": "1/5 checks passed so far; remaining results appear as they finish.",
+      "steps": [
+        {
+          "number": 1,
+          "label": "1. Lookahead",
+          "state": "pass",
+          "details": [
+            "Lookahead passed: the runner recorded entry into Eval 2.",
+            "Recovered from the recorded milestone. Individual cut details have not been published by this older runner."
+          ]
+        },
+        {
+          "number": 2,
+          "label": "2. Friction",
+          "state": "awaiting_results",
+          "details": [
+            "This run started before per-eval streaming; its current individual check is not reported.",
+            "The harness is active. Saved results appear here as evidence becomes available."
+          ]
+        },
+        {
+          "number": 3,
+          "label": "3. Sensitivity",
+          "state": "awaiting_results",
+          "details": [
+            "This run started before per-eval streaming; its current individual check is not reported.",
+            "The harness is active. Saved results appear here as evidence becomes available."
+          ]
+        },
+        {
+          "number": 4,
+          "label": "4. Decay",
+          "state": "awaiting_results",
+          "details": [
+            "This run started before per-eval streaming; its current individual check is not reported.",
+            "The harness is active. Saved results appear here as evidence becomes available."
+          ]
+        },
+        {
+          "number": 5,
+          "label": "5. Deflated Sharpe",
+          "state": "awaiting_results",
+          "details": [
+            "This run started before per-eval streaming; its current individual check is not reported.",
+            "The harness is active. Saved results appear here as evidence becomes available."
+          ]
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "finished_at": "2026-11-14T22:35:16.125Z"
+}
