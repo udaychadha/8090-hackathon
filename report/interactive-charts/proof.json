@@ -1,0 +1,23 @@
+{
+  "screenshots": [
+    "report/interactive-charts/equity-hover.png",
+    "report/interactive-charts/equity-expanded.png",
+    "report/interactive-charts/dataset-hover.png",
+    "report/interactive-charts/dataset-expanded.png",
+    "report/interactive-charts/mobile-light-expanded.png"
+  ],
+  "checks": [
+    "equity pointer values match recorded indices",
+    "crosshairs and both series markers",
+    "expanded equity keyboard navigation and Escape focus restoration",
+    "dataset hover matches real downsampled prices",
+    "dataset expansion more than doubles chart width",
+    "split switch resets inspection and uses new observations",
+    "mobile touch readout persists after tap",
+    "light-theme tooltip fits viewport",
+    "native dialog close restores focus on touch device",
+    "no API writes or browser errors"
+  ],
+  "errors": [],
+  "variant_id": "r_ffbba23dbcff_C"
+}

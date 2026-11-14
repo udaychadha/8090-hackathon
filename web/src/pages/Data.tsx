@@ -413,7 +413,7 @@ function DatasetPanel({
       ) : (
         preview.data && (
           <>
-            <DatasetChart preview={preview.data} />
+            <DatasetChart preview={preview.data} title={dataset.name} />
             <p className="caption">
               {preview.data.rows.length}{" "}
               {preview.data.downsampled ? "downsampled" : "retained"}{" "}

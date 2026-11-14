@@ -872,6 +872,143 @@ details[open] > summary {
 .chart-caption {
   text-align: center;
 }
+.chart-frame {
+  container-type: inline-size;
+}
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+.chart-toolbar .chart-legend {
+  flex-wrap: wrap;
+  gap: var(--s3);
+}
+.chart-expand {
+  white-space: nowrap;
+  font-size: var(--caption);
+  padding: var(--s2) var(--s3);
+}
+.chart-plot {
+  position: relative;
+}
+.chart-canvas {
+  height: var(--chart-equity-height);
+}
+.dataset-canvas {
+  height: var(--chart-data-height);
+}
+.chart-canvas-expanded {
+  height: var(--chart-expanded-height);
+}
+.interactive-chart {
+  height: 100%;
+  min-height: 0;
+  cursor: crosshair;
+  touch-action: pan-y;
+  border-radius: var(--radius-small);
+}
+.interactive-chart:focus-visible {
+  outline: var(--focus-width) solid var(--accent);
+  outline-offset: calc(-1 * var(--focus-width));
+}
+.chart .chart-crosshair {
+  stroke: var(--fg);
+  stroke-width: var(--hairline);
+  stroke-dasharray: 3 4;
+  opacity: 0.65;
+}
+.chart-point,
+.chart-single-point {
+  fill: var(--fg);
+  stroke: var(--inset);
+  stroke-width: var(--focus-width);
+}
+.chart-point.secondary-point {
+  fill: var(--muted);
+}
+.chart-tooltip {
+  position: absolute;
+  top: var(--s3);
+  z-index: 1;
+  pointer-events: none;
+  padding: var(--s3);
+  border: var(--hairline) solid var(--border-strong);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font: var(--caption) var(--mono);
+}
+.chart-tooltip > strong,
+.chart-tooltip > span {
+  display: block;
+}
+.chart-tooltip strong {
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.chart-tooltip dl {
+  margin: var(--s3) 0 0;
+  display: grid;
+  gap: var(--s2);
+}
+.chart-tooltip dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: baseline;
+  gap: var(--s2);
+}
+.chart-tooltip dt {
+  color: var(--muted);
+  font-size: var(--label);
+}
+.chart-tooltip dd {
+  margin: 0;
+  text-align: right;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.chart-help {
+  margin: var(--s2) 0 0;
+}
+dialog.chart-dialog {
+  width: min(calc(100vw - var(--s8)), var(--chart-dialog-width));
+  max-width: none;
+  max-height: calc(100dvh - var(--s8));
+  padding: var(--s6);
+  background: var(--surface);
+  color: var(--body);
+  border: var(--hairline) solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: auto;
+}
+dialog.chart-dialog::backdrop {
+  background: var(--overlay);
+}
+.chart-dialog-heading {
+  align-items: flex-start;
+  margin-bottom: var(--s4);
+}
+.chart-dialog-heading h2 {
+  overflow-wrap: anywhere;
+}
+.chart-dialog-heading button {
+  flex-shrink: 0;
+}
+.chart-dialog > .chart-legend {
+  margin-bottom: var(--s4);
+}
+@container (max-width: 500px) {
+  .chart-tooltip {
+    position: static;
+    width: auto !important;
+    margin-top: var(--s3);
+    box-shadow: none;
+  }
+}
 .graveyard-layout {
   display: grid;
   grid-template-columns: var(--graveyard-sidebar) minmax(0, 1fr);

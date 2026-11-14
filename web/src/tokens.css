@@ -82,6 +82,10 @@
   --upload-height: 180px;
   --textarea-height: 140px;
   --chart-height: 160px;
+  --chart-equity-height: 360px;
+  --chart-data-height: 300px;
+  --chart-expanded-height: clamp(300px, 60dvh, 640px);
+  --chart-dialog-width: 1440px;
   --eval-row-height: 80px;
   --graveyard-sidebar: 280px;
   --graveyard-sidebar-small: 220px;

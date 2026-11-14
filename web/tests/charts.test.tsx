@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { DatasetChart, EquityChart } from "../src/components/Charts";
 
@@ -27,9 +27,10 @@ it("seals the holdout region and draws prices only from returned visible observa
       }}
     />,
   );
-  expect(screen.getByText("HOLDOUT")).toBeVisible();
-  expect(screen.getByText("sealed")).toBeVisible();
-  const d = document.querySelector(".line-net")?.getAttribute("d") ?? "";
-  expect(d).toContain("395.00");
-  expect(d).not.toContain("410.00");
+  expect(screen.getByText(/HOLDOUT remains sealed/)).toBeVisible();
+  const chart = screen.getByRole("slider", { name: "Dataset price chart" });
+  fireEvent.keyDown(chart, { key: "End" });
+  expect(screen.getByRole("status")).toHaveTextContent("2020-01-02");
+  expect(screen.getByRole("status")).toHaveTextContent("20.0000");
+  expect(screen.getByRole("status")).not.toHaveTextContent("2020-01-03");
 });

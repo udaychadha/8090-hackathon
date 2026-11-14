@@ -384,12 +384,11 @@ export function TearsheetPage() {
       <section className="card">
         <div className="row between">
           <h2>Equity</h2>
-          <div className="chart-legend">
-            <span className="gross">gross</span>
-            <span className="net">net of 5 bps</span>
-          </div>
         </div>
-        <EquityChart equity={variant.equity} />
+        <EquityChart
+          equity={variant.equity}
+          title={`${variant.source_title} · ${variant.variant} · Equity`}
+        />
         {variant.equity_boundaries && (
           <p className="caption">
             Exact boundaries (UTC): IS {variant.equity_boundaries.is_end} · OOS{" "}

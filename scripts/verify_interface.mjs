@@ -87,7 +87,9 @@ async function settled(route) {
   await expect(page.locator("main h1").first()).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByRole("status")).toHaveCount(0, { timeout: 60_000 });
+  await expect(page.locator('.empty[role="status"]')).toHaveCount(0, {
+    timeout: 60_000,
+  });
   await expect(page.getByRole("alert")).toHaveCount(0);
 }
 async function shot(name, fullPage = true) {
@@ -155,7 +157,7 @@ try {
       await expect(
         page.getByRole("heading", { name: "Evidence browser" }),
       ).toBeVisible();
-      await expect(page.getByRole("status")).toHaveCount(0, {
+      await expect(page.locator('.empty[role="status"]')).toHaveCount(0, {
         timeout: 60_000,
       });
       await expect(
@@ -167,9 +169,9 @@ try {
         page.getByRole("button", { name: "main/1min/SPY", exact: true }),
       ).toBeVisible();
       await expect(
-        page.getByRole("img", { name: /^Visible IS and OOS prices from / }),
+        page.getByRole("slider", { name: "Dataset price chart" }),
       ).toBeVisible({ timeout: 60_000 });
-      await expect(page.getByRole("status")).toHaveCount(0, {
+      await expect(page.locator('.empty[role="status"]')).toHaveCount(0, {
         timeout: 60_000,
       });
     }
@@ -213,7 +215,9 @@ try {
   await page.getByRole("button", { name: "Close artifact preview" }).click();
   for (const tab of ["Ingest log", "Audits", "Data contract", "Universe"]) {
     await page.getByRole("tab", { name: tab, exact: true }).click();
-    await expect(page.getByRole("status")).toHaveCount(0, { timeout: 60_000 });
+    await expect(page.locator('.empty[role="status"]')).toHaveCount(0, {
+      timeout: 60_000,
+    });
     await expect(page.getByRole("alert")).toHaveCount(0);
   }
   proof.filters_and_evidence_checked = true;
