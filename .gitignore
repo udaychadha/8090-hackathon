@@ -21,3 +21,7 @@ papers/*.pdf
 papers/*.json
 papers/*.md
 papers/*.tmp
+node_modules/
+test-results/
+playwright-report/
+*.tsbuildinfo
