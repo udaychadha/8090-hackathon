@@ -43,3 +43,6 @@ typing_extensions==4.16.0
 tzdata==2026.6
 urllib3==2.8.0
 websockets==17.4
+hypothesis==6.170.15
+PyYAML==6.0.3
+sortedcontainers==2.4.0

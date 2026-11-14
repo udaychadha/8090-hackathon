@@ -70,6 +70,10 @@ work-orders/     # one .md per WO below, copied from this file
 
 ## Data
 
+The canonical data contract is `factory/data_contract/contract.yaml`. Its generated
+reference is [docs/DATA.md](docs/DATA.md); use it for fields, units, timestamp
+meaning, session offsets, fill provenance and dataset validation rules.
+
 Two tiers. Both: `feed=sip`, `adjustment=all` (Alpaca defaults to raw prices;
 without this every split looks like a crash). Free plan cannot query the most
 recent 15 minutes, so end the range at yesterday. Page size max is 10,000 data
@@ -104,6 +108,9 @@ HOLDOUT = last 20%. HOLDOUT is touched only by WO-09.
 today's index membership, so results carry survivorship bias.
 
 ## Strategy contract
+
+Strategy data inputs and session-time semantics are defined in the generated
+[docs/DATA.md](docs/DATA.md). Do not maintain separate data-contract prompt text.
 
 Every generated strategy is one Python file exposing:
 
