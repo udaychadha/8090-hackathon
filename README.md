@@ -1,5 +1,10 @@
 # Financial Models In the Arena
 
+Licensed under the [MIT License](LICENSE). Original project code, documentation,
+tests and project-owned design assets are covered. Dependencies and external
+papers/data retain their own terms; see [third-party notices](THIRD_PARTY_NOTICES.md),
+including the PDF extractor's AGPL/commercial licensing.
+
 Current experimental work is checkpointed in
 [report/WO12-CHECKPOINT.md](report/WO12-CHECKPOINT.md). The implementation is
 merged independently of the still-running Congress acceptance experiments.

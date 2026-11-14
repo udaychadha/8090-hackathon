@@ -8,6 +8,15 @@ hackathon.
 
 **Hard deadline: code freeze Saturday Nov 14, 3:30pm PT. Feature freeze 1:00pm.**
 
+## License
+
+Original project code, documentation, tests and project-owned design assets are
+MIT-licensed under [LICENSE](LICENSE). Keep the Python and frontend package
+license metadata consistent. Preserve third-party notices and source terms;
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) records the scope and the
+PyMuPDF dependency's AGPL/commercial licensing. Do not relicense third-party
+papers, datasets or dependency code as project-owned MIT material.
+
 ## Status (Fri Nov 13, 10:15pm PT)
 
 **Plan change, Fri 10:40pm:** parallel tracks are dropped. One session, one
