@@ -122,8 +122,15 @@ code without model calls, repairs or strategy changes:
 python -m scripts.backfill_gross_diagnostics --apply
 ```
 
-The command skips active runs and previously recorded diagnostics, backs up the
-database, and saves `report/gross-diagnostics-backfill.json`. Unavailable results
+Restart the API on this revision before applying new record fields. The command
+refuses immediate writes while any run is active. `--wait-running --apply`
+computes first and defers writes until the arena is idle, so a process that loaded
+an older strict schema can still read its trial cohort. During an in-flight schema
+upgrade, also pass `--wait-pid <legacy-process-id>`: a terminal run status can precede
+its last database read, so publication must wait for that process to exit.
+The command skips previously
+recorded diagnostics, backs up the database, and saves
+`report/gross-diagnostics-backfill.json`. Unavailable results
 show a reason instead of fabricated numbers. Add `--retry-unavailable` only to
 retry those computations; `--variant-id` can select a retained candidate. Zero
 bps removes trading-cost deductions, not runtime or computational work.

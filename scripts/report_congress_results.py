@@ -42,6 +42,11 @@ def main():
     audit = json.loads((root / "report/wo12-source-audit.json").read_text())
     committee = json.loads((root / "report/wo12-committee-audit.json").read_text())
     unchanged = verify_historical_records(root)
+    with sqlite3.connect(root / "runs/factory.db") as db:
+        gross = {
+            key: json.loads(payload).get("gross_diagnostics")
+            for key, payload in db.execute("SELECT id,payload FROM variants")
+        }
     lines = [
         "# WO-12 — Congress experiments",
         "",
@@ -96,6 +101,43 @@ def main():
                     for cost in ("0", "2", "5", "10")
                 ]
                 lines.append(f"| {labels[name]} | {row['variant']} | " + " | ".join(numbers) + " |")
+    lines += [
+        "",
+        "## Gross diagnostics — zero bps, no verdict authority",
+        "",
+        "| Experiment | Variant | Diagnostic label | Sensitivity | "
+        "Gross base / worst Sharpe | Decay | Gross IS / OOS Sharpe |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for name in experiments:
+        for row in runs[name]["variants"]:
+            diagnostic = gross.get(row["variant_id"]) or {}
+            sensitivity, decay = diagnostic.get("eval_3"), diagnostic.get("eval_4")
+
+            def outcome(result):
+                return (
+                    "not measured" if result is None else "pass" if result["passed"] else "failed"
+                )
+
+            def pair(result, first, second):
+                values = (result or {}).get("metrics", {})
+                return " / ".join(
+                    "not available" if values.get(key) is None else f"{values[key]:.4f}"
+                    for key in (first, second)
+                )
+
+            lines.append(
+                f"| {labels[name]} | {row['variant']} | "
+                f"{diagnostic.get('label') or 'not applicable'} | "
+                f"{outcome(sensitivity)} | {pair(sensitivity, 'base_sharpe', 'worst_sharpe')} | "
+                f"{outcome(decay)} | {pair(decay, 'is_sharpe', 'oos_sharpe')} |"
+            )
+    lines += [
+        "",
+        "Diagnostic passes do not change any status, eval count, or VERIFIED eligibility. "
+        "Undefined or unavailable measurements are not zeros. Full jitter and concentration "
+        "evidence is retained separately in the database and proof JSON.",
+    ]
     attempts = [runs[name] for name in experiments] + runs.get("invalid_attempts", [])
     complete_cost = all(item.get("cost_complete") for item in attempts)
     cost = sum(item["estimated_model_cost_usd"] for item in attempts) if complete_cost else None
@@ -135,6 +177,11 @@ def main():
     proof = {
         "historical_rows_unchanged": unchanged,
         "runs": runs,
+        "gross_diagnostics": {
+            row["variant_id"]: gross.get(row["variant_id"])
+            for name in experiments
+            for row in runs[name]["variants"]
+        },
         "source_commit": audit["commit"],
         "source_rows": audit["eligible"]["rows"],
         "committee_qualifying_purchases": committee["qualifying_purchase_count"],

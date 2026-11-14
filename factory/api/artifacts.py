@@ -287,6 +287,9 @@ class ArtifactRegistry:
             "gross-diagnostics-congress.json",
             "gross-diagnostics-results.md",
             "gross-diagnostics-proof.json",
+            "gross-diagnostics-record-audit.json",
+            "gross-diagnostics-staged.json",
+            "gross-schema-compatibility.json",
         ):
             add(
                 f"report/{filename}",
@@ -302,6 +305,12 @@ class ArtifactRegistry:
                 historical=True,
                 audit_only=True,
             )
+        add(
+            "runs/gross-staging-before.sqlite3",
+            "record_backup",
+            historical=True,
+            audit_only=True,
+        )
         for path in sorted((self.root / "runs").glob("events.jsonl.*")):
             # Records preserves divergent mirrors with this specific backup prefix.
             if "backup" in path.name or "conflict" in path.name:

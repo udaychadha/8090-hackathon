@@ -110,9 +110,7 @@ def test_active_evidence_is_skipped(tmp_path, variant_status, run_status):
     from scripts.backfill_gross_diagnostics import backfill
 
     with fixture_store(tmp_path / "runs", variant_status, run_status) as records:
-        report = backfill(
-            records, apply=True, compute=lambda *a, **kw: pytest.fail("Active replay")
-        )
+        report = backfill(records, compute=lambda *a, **kw: pytest.fail("Active replay"))
         assert report["rows"][0]["action"] == "skipped_running"
         assert "gross_diagnostics" not in raw(records, "variants", "r_test_A")
 
@@ -307,3 +305,240 @@ def test_data_change_during_replay_is_unavailable_not_cached(tmp_path):
         report = backfill(records, data_root=data_root, compute=changing_replay)
         assert report["rows"][0]["state"] == "unavailable"
         assert "changed" in report["rows"][0]["diagnostics"]["reason"].lower()
+
+
+def finish_candidate(records, run_id, *, code=None, params=None):
+    row = records.get("variants", run_id + "_A")
+    row.update(status="FAILED_EVAL_2", default_status="FAILED_EVAL_2")
+    if code is not None:
+        row["code"] = code
+    if params is not None:
+        row["params"] = params
+    row = records.put("variants", run_id + "_A", run_id, row)
+    run = records.get("runs", run_id)
+    records.put("runs", run_id, run_id, {**run, "status": "COMPLETED", "variants": [row]})
+
+
+def test_wait_running_processes_terminal_first_then_reuses_after_completion(tmp_path):
+    from scripts.backfill_gross_diagnostics import backfill
+
+    with fixture_store(tmp_path / "runs", "RUNNING", "RUNNING") as records:
+        duplicate_candidate(records, "z_prior")
+        finish_candidate(records, "z_prior")
+        records.void_run("z_prior", "Invalidated prior harness attempt")
+        observed = []
+        waits = []
+
+        def wait(seconds):
+            waits.append(seconds)
+            assert observed == ["z_prior_A"]
+            assert "gross_diagnostics" not in raw(records, "variants", "z_prior_A")
+            assert raw(records, "variants", "r_test_A")["status"] == "RUNNING"
+            assert "gross_diagnostics" not in raw(records, "variants", "r_test_A")
+            finish_candidate(records, "r_test")
+
+        def progress(report):
+            if report["rows"]:
+                observed[:] = [row["variant_id"] for row in report["rows"]]
+
+        replayed = []
+
+        def replay(path, **kwargs):
+            replayed.append(path)
+            return complete(path, **kwargs)
+
+        report = backfill(
+            records,
+            apply=True,
+            data_root=tmp_path / "data",
+            compute=replay,
+            wait_running=True,
+            wait=wait,
+            on_row=progress,
+        )
+        assert waits == [10]
+        assert len(replayed) == 1
+        assert [row["variant_id"] for row in report["rows"]] == ["z_prior_A", "r_test_A"]
+        assert report["rows"][1]["reused_from_variant_id"] == "z_prior_A"
+        assert report["rows"][1]["diagnostics"]["label"] == "no signal before costs"
+        assert "waiting" not in report
+        assert all(row["non_diagnostic_evidence_unchanged"] for row in report["rows"])
+
+
+def test_wait_running_rereads_changed_code_and_params(tmp_path):
+    from scripts.backfill_gross_diagnostics import backfill
+
+    data_root = tmp_path / "data"
+    old_code = 'PARAMS = {"lookback": 60}\n# exact retained candidate\n'
+    new_code = 'PARAMS = {"lookback": 90}\n# terminal retained candidate\n'
+    with fixture_store(tmp_path / "runs", "RUNNING", "RUNNING") as records:
+        duplicate_candidate(records, "z_prior")
+        finish_candidate(records, "z_prior")
+        observed_code = []
+        waiting_progress = []
+        result_path = tmp_path / "original.py"
+        result_path.write_text(old_code)
+
+        def replay(path, **kwargs):
+            observed_code.append(Path(path).read_text())
+            return complete(result_path)
+
+        def wait(seconds):
+            assert seconds == 10
+            finish_candidate(records, "r_test", code=new_code, params={"lookback": 90})
+
+        def progress(report):
+            if report.get("waiting"):
+                waiting_progress.append(copy.deepcopy(report["waiting"]))
+
+        report = backfill(
+            records,
+            data_root=data_root,
+            compute=replay,
+            wait_running=True,
+            wait=wait,
+            on_row=progress,
+        )
+        assert observed_code == [old_code, new_code]
+        assert report["rows"][1]["reused_from_variant_id"] is None
+        assert report["rows"][1]["status"] == "FAILED_EVAL_2"
+        assert waiting_progress[0]["variant_id"] == "r_test_A"
+        assert waiting_progress[0]["state"] == "pending"
+        assert "gross_diagnostics" not in raw(records, "variants", "r_test_A")
+
+
+def test_apply_refuses_unrelated_active_parent_before_computing(tmp_path):
+    from scripts.backfill_gross_diagnostics import backfill
+
+    with fixture_store(tmp_path / "runs") as records:
+        records.put("runs", "unrelated", "unrelated", {"status": "RUNNING"})
+        with pytest.raises(ValueError, match="running"):
+            backfill(
+                records, apply=True, compute=lambda *a, **kw: pytest.fail("Active-store replay")
+            )
+        assert "gross_diagnostics" not in raw(records, "variants", "r_test_A")
+        assert backfill(records, compute=complete)["rows"][0]["state"] == "complete"
+
+
+def test_wait_mode_stages_terminal_result_until_unrelated_parent_is_idle(tmp_path):
+    from scripts.backfill_gross_diagnostics import backfill
+
+    with fixture_store(tmp_path / "runs") as records:
+        records.put("runs", "unrelated", "unrelated", {"status": "RUNNING"})
+        computed = []
+        progress = []
+
+        def replay(path, **kwargs):
+            computed.append(True)
+            return complete(path, **kwargs)
+
+        def wait(seconds):
+            assert computed == [True]
+            assert "gross_diagnostics" not in raw(records, "variants", "r_test_A")
+            assert "gross_diagnostics" not in raw(records, "runs", "r_test")["variants"][0]
+            run = records.get("runs", "unrelated")
+            records.put("runs", "unrelated", "unrelated", {**run, "status": "COMPLETED"})
+
+        report = backfill(
+            records,
+            apply=True,
+            wait_running=True,
+            wait=wait,
+            compute=replay,
+            data_root=tmp_path / "data",
+            on_row=lambda value: progress.append(copy.deepcopy(value)),
+        )
+        assert report["rows"][0]["action"] == "applied"
+        assert any(value.get("waiting", {}).get("kind") == "global_idle" for value in progress)
+        assert raw(records, "variants", "r_test_A")["gross_diagnostics"]["state"] == "complete"
+
+
+def test_deferred_apply_checks_data_snapshot_again_after_wait(tmp_path):
+    from scripts.backfill_gross_diagnostics import backfill
+
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    manifest = data_root / "manifest.json"
+    manifest.write_text("original")
+    with fixture_store(tmp_path / "runs") as records:
+        records.put("runs", "unrelated", "unrelated", {"status": "RUNNING"})
+
+        def wait(seconds):
+            manifest.write_text("new data")
+            run = records.get("runs", "unrelated")
+            records.put("runs", "unrelated", "unrelated", {**run, "status": "COMPLETED"})
+
+        report = backfill(
+            records, apply=True, wait_running=True, wait=wait, compute=complete, data_root=data_root
+        )
+        assert report["rows"][0]["action"] == "conflict"
+        assert "gross_diagnostics" not in raw(records, "variants", "r_test_A")
+
+
+def test_wait_pid_holds_publication_after_terminal_run_until_process_exits(tmp_path):
+    from scripts.backfill_gross_diagnostics import backfill
+
+    with fixture_store(tmp_path / "runs") as records:
+        computed = []
+        alive = {65120: True}
+        waits = []
+
+        def replay(path, **kwargs):
+            computed.append(True)
+            return complete(path, **kwargs)
+
+        def wait(seconds):
+            waits.append(seconds)
+            assert computed == [True]
+            assert records.get("runs", "r_test")["status"] == "COMPLETED"
+            assert "gross_diagnostics" not in raw(records, "variants", "r_test_A")
+            alive[65120] = False
+
+        report = backfill(
+            records,
+            apply=True,
+            wait_running=True,
+            wait_pids=[65120],
+            process_alive=lambda pid: alive[pid],
+            wait=wait,
+            compute=replay,
+            data_root=tmp_path / "data",
+        )
+        assert waits == [10]
+        assert report["rows"][0]["action"] == "applied"
+
+
+@pytest.mark.parametrize(
+    "outcome,expected", [(None, True), (PermissionError, True), (ProcessLookupError, False)]
+)
+def test_process_guard_handles_alive_permission_denied_and_missing(monkeypatch, outcome, expected):
+    from scripts import backfill_gross_diagnostics as module
+
+    def kill(pid, signal):
+        assert pid == 65120 and signal == 0
+        if outcome:
+            raise outcome()
+
+    monkeypatch.setattr(module.os, "kill", kill)
+    assert module._pid_alive(65120) is expected
+
+
+def test_data_snapshot_is_checked_inside_write_transaction(tmp_path, monkeypatch):
+    from scripts import backfill_gross_diagnostics as module
+
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    manifest = data_root / "manifest.json"
+    manifest.write_text("original")
+    with fixture_store(tmp_path / "runs") as records:
+        original = module._running_ids
+
+        def checked_running(store):
+            if store.db.in_transaction:
+                manifest.write_text("changed after transaction begins")
+            return original(store)
+
+        monkeypatch.setattr(module, "_running_ids", checked_running)
+        report = module.backfill(records, apply=True, compute=complete, data_root=data_root)
+        assert report["rows"][0]["action"] == "conflict"
+        assert "gross_diagnostics" not in raw(records, "variants", "r_test_A")

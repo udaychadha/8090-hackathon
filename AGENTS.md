@@ -327,6 +327,9 @@ economic failure. Active runs remain pending. Show the label and gross numbers
 on the leaderboard and tearsheet, clearly marked diagnostic, never success-styled
 unless the authoritative status is VERIFIED. Historical diagnostics may execute
 retained code without model calls, self-heal, spec changes or verdict updates.
+Backfill defers new record-field writes while the arena is active. For a process
+that loaded an older strict record schema, guard its PID until exit as well;
+terminal status alone does not establish that its final database reads are done.
 
 Both LeaderboardRow and VariantDetail add nullable `gross_diagnostics` with this
 shape. Old records without it remain readable. Zero bps means no trading-cost
@@ -411,7 +414,8 @@ LeaderboardRow = {
   "status": "VERIFIED" | "FAILED_EVAL_n" | "BUG_UNRESOLVED" | "BLOCKED_DATA" | "RUNNING" | "INACTIVE" | "VOID",
   "profile": string,                     # "default" until WO-16
   "default_status": string,              # verdict under the default profile
-  "default_evals_passed": 0..5
+  "default_evals_passed": 0..5,
+  "gross_diagnostics": GrossDiagnostics | null  # separate 0-bps observations, as defined above
 }
 
 VariantDetail = LeaderboardRow + {

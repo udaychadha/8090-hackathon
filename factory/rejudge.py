@@ -14,6 +14,7 @@ from pathlib import Path
 from factory.agents.records import Records
 from factory.evals.decay import decay_from_metrics
 from factory.evals.deflated import deflated_from_metrics
+from factory.gross_diagnostics import diagnostics_for_status
 from factory.record_migration import utc_now
 from factory.trials import trial_cohort
 
@@ -101,6 +102,11 @@ def plan_rejudgment(records):
                     if status == "VERIFIED" and not before.get("verification_eligible", True):
                         status = "INSUFFICIENT_SAMPLE"
                     after["status"] = after["default_status"] = status
+            if after.get("gross_diagnostics") is not None:
+                # Labels follow the completed judgment; diagnostics never judge it.
+                after["gross_diagnostics"] = diagnostics_for_status(
+                    after["gross_diagnostics"], after["status"]
+                )
             variants.append(after)
         rows.append(
             {
