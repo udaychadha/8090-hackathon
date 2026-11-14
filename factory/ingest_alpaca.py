@@ -242,7 +242,8 @@ def ingest_symbol(
     staging = root / ".staging" / frequency / symbol / request_id
     staging.mkdir(parents=True, exist_ok=True)
     chunks, stats = [], []
-    for left, right in month_ranges(start, through):
+    ranges = month_ranges(start, through) if frequency == "1min" else [(start, through)]
+    for left, right in ranges:
         path = staging / f"{left}_{right}.parquet"
         stat_path = path.with_suffix(".json")
         if not (path.exists() and stat_path.exists()):

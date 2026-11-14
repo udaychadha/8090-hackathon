@@ -155,3 +155,16 @@ def test_ingestion_writes_parquet_and_resumes_without_requesting_again(tmp_path)
     assert first == second and client.calls == 1
     assert len(pd.read_parquet(tmp_path / "1day" / "SPY.parquet")) == 5
     assert first["fill_rate"] == 0
+
+
+def test_daily_history_is_one_paginated_range_not_monthly_requests(tmp_path):
+    class Client:
+        calls = []
+
+        def fetch(self, symbol, frequency, start, through):
+            self.calls.append((start, through))
+            return bars(expected_index(frequency, start, through))
+
+    client = Client()
+    ingest_symbol(client, tmp_path, "1day", "SPY", "2016-01-01", "2024-06-07")
+    assert client.calls == [("2016-01-01", "2024-06-07")]
