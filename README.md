@@ -129,3 +129,4 @@ Chromium executable and `ARENA_UI_URL` to another local UI URL.
 Record migration evidence: [docs/RECORDS.md](docs/RECORDS.md).
 Artifact reachability: [docs/RECORD_INVENTORY.md](docs/RECORD_INVENTORY.md).
 API behavior and verification: [docs/API.md](docs/API.md).
+Final acceptance and screenshots: [report/wo08-acceptance.md](report/wo08-acceptance.md).

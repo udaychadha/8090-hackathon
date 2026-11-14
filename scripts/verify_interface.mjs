@@ -225,6 +225,12 @@ try {
       `/runs/${run.run_id}${run.voided ? "?include_voided=true" : ""}`,
     );
     await expect(page.locator("main")).toContainText(run.status);
+    if (detail.source)
+      await expect(
+        page
+          .getByRole("combobox", { name: "Open run", exact: true })
+          .locator("option:checked"),
+      ).toContainText(detail.source.title);
     for (const variant of run.variants) await assertVariant(variant);
     if (run.voided)
       await expect(page.locator("main")).toContainText(run.void_reason);
@@ -337,6 +343,11 @@ try {
     await expect(page.locator(".page-title .status")).toHaveText(final.status, {
       timeout: 30_000,
     });
+    await expect(
+      page
+        .getByRole("combobox", { name: "Open run", exact: true })
+        .locator("option:checked"),
+    ).toContainText(final.source?.title ?? final.submission.upload_name);
     for (const variant of final.variants) await assertVariant(variant);
     const stream = await page.evaluate(() => window.__arenaStreamProof);
     assert(

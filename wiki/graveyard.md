@@ -480,3 +480,33 @@ The strategy buys five-day losers and shorts winners after a one-session skip, r
 **Limitations.** Current-membership selection introduces survivorship bias. Historical constituent membership, exact paper transaction costs, borrow and financing costs, and point-in-time adjusted histories are unavailable or incompletely modeled. Eligibility, tie-breaking, replacement ordering, and retained-position sizing remain partly unspecified. No unbuffered comparison is supplied, so the buffer’s incremental turnover benefit cannot be established.
 
 The supplied evidence does not support robust net profitability for this transfer. This is a backtest assessment, not trading advice.
+
+## Market intraday momentum — first-half-hour sign timing | r_55eebea2c07d | A
+
+FAILED_EVAL_2 (1/5)
+
+Qualitative review questions (model-selected; fixed wording):
+
+- Which observation and execution conventions need reconciliation with the source paper?
+- Are the required inputs available when each signal is formed?
+- Which transaction-cost assumptions need comparison with the source?
+
+## Market intraday momentum — first-half-hour sign timing | r_55eebea2c07d | B
+
+FAILED_EVAL_2 (1/5)
+
+Qualitative review questions (model-selected; fixed wording):
+
+- Which observation and execution conventions need reconciliation with the source paper?
+- Are the required inputs available when each signal is formed?
+- How do corporate-action conventions affect comparability with the source?
+
+## Market intraday momentum — first-half-hour sign timing | r_55eebea2c07d | C
+
+FAILED_EVAL_2 (1/5)
+
+Qualitative review questions (model-selected; fixed wording):
+
+- Which observation and execution conventions need reconciliation with the source paper?
+- Are the required inputs available when each signal is formed?
+- Which transaction-cost assumptions need comparison with the source?

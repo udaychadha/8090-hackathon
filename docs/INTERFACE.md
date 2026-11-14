@@ -53,3 +53,19 @@ README for startup and test commands; `web/README.md` describes the frontend.
 - Evals displays the actual five read-only rules and source. Draft authoring,
   threshold editing and unimplemented providers/uploads remain unavailable.
 - Light theme and accent choices persist; default dark matches the boards.
+
+## Phase 4 complete
+
+The approved Gao paper was submitted through the interface and completed as
+`r_55eebea2c07d` in 167.7059 seconds, at an estimated model cost of $0.6992345.
+The browser received 41 live events including completion. A/B/C all traded and
+ended FAILED_EVAL_2 with 1/5 evals passed; IS days traded were 441/441/179.
+The full Python checks (375 including the explicit stored-data scan) and final
+frontend suite (17) passed. The record audit has zero mismatches.
+
+Live acceptance also caught a stale run-selector title after extraction. The
+selector now uses current run detail, with two regression cases and a real
+completed-record browser recheck. No additional paid run was needed.
+
+See the [final report and screenshot index](../report/wo08-acceptance.md) for
+evidence, final counts, limitations and deliberate differences from the boards.

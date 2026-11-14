@@ -15,7 +15,7 @@ import {
   mergeEvents,
 } from "../evidence";
 import { useResource } from "../hooks";
-import type { Event } from "../types";
+import type { Event, RunSummary } from "../types";
 import { ArtifactLinks } from "../components/Artifacts";
 import {
   AuditToggle,
@@ -171,7 +171,7 @@ function RunDetailPage({
   audit: boolean;
   onAudit: (v: boolean) => void;
   selectRun: (id: string) => void;
-  runs: { run_id: string; source: { title: string } | null }[];
+  runs: Pick<RunSummary, "run_id" | "source" | "submission">[];
 }) {
   const resource = useResource(
     () => api.run(runId, audit),
@@ -287,12 +287,14 @@ function RunDetailPage({
               value={runId}
               onChange={(e) => selectRun(e.target.value)}
             >
-              {!runs.some((r) => r.run_id === runId) && (
-                <option>{runId}</option>
-              )}
-              {runs.map((r) => (
+              {/* The current detail keeps changing during extraction; history
+                  may still contain the original source-less reservation. */}
+              {[run, ...runs.filter((r) => r.run_id !== runId)].map((r) => (
                 <option key={r.run_id} value={r.run_id}>
-                  {r.run_id} · {r.source?.title ?? "No extracted source"}
+                  {r.run_id} ·{" "}
+                  {r.source?.title ??
+                    r.submission?.upload_name ??
+                    "No extracted source"}
                 </option>
               ))}
             </select>

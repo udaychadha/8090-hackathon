@@ -1,0 +1,552 @@
+{
+  "started_at": "2026-11-14T12:05:33.342Z",
+  "base": "http://127.0.0.1:5173",
+  "screens": [
+    {
+      "name": "1-run",
+      "route": "/runs/r_ffbba23dbcff",
+      "title": "Run r_ffbba23dbcff",
+      "screenshot": "report/wo08-browser/1-run.png"
+    },
+    {
+      "name": "2-leaderboard",
+      "route": "/leaderboard",
+      "title": "Leaderboard",
+      "screenshot": "report/wo08-browser/2-leaderboard.png"
+    },
+    {
+      "name": "3-tearsheet",
+      "route": "/variants/r_ffbba23dbcff_A",
+      "title": "Another look at trading costs and short-term reversal profits · A",
+      "screenshot": "report/wo08-browser/3-tearsheet.png"
+    },
+    {
+      "name": "4-graveyard",
+      "route": "/graveyard",
+      "title": "Graveyard",
+      "screenshot": "report/wo08-browser/4-graveyard.png"
+    },
+    {
+      "name": "5-new-run",
+      "route": "/new",
+      "title": "New run",
+      "screenshot": "report/wo08-browser/5-new-run.png"
+    },
+    {
+      "name": "6-evals",
+      "route": "/evals",
+      "title": "Evals",
+      "screenshot": "report/wo08-browser/6-evals.png"
+    },
+    {
+      "name": "7-data",
+      "route": "/data",
+      "title": "Data",
+      "screenshot": "report/wo08-browser/7-data.png"
+    }
+  ],
+  "runs": [
+    {
+      "run_id": "r_ffbba23dbcff",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_ffbba23dbcff.png"
+    },
+    {
+      "run_id": "r_e7094212a558",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_e7094212a558.png"
+    },
+    {
+      "run_id": "r_d1b6cda53684",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_d1b6cda53684.png"
+    },
+    {
+      "run_id": "r_b8116b8c72ef",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_b8116b8c72ef.png"
+    },
+    {
+      "run_id": "r_654a63b4217c",
+      "status": "FAILED",
+      "variants": 0,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_654a63b4217c.png"
+    },
+    {
+      "run_id": "r_449ef7fd3ae6",
+      "status": "VOID",
+      "variants": 3,
+      "voided": true,
+      "screenshot": "report/wo08-browser/run-r_449ef7fd3ae6.png"
+    },
+    {
+      "run_id": "r_275efbdfa468",
+      "status": "FAILED",
+      "variants": 0,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_275efbdfa468.png"
+    },
+    {
+      "run_id": "r_17ac8caf8a59",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_17ac8caf8a59.png"
+    }
+  ],
+  "errors": [],
+  "baseline": {
+    "visible_runs": 7,
+    "retained_runs": 8,
+    "visible_variants": 15,
+    "verified": 0
+  },
+  "filters_and_evidence_checked": true,
+  "audit_toggle_verified": true,
+  "mobile_checked": true,
+  "submission": {
+    "run_id": "r_55eebea2c07d",
+    "paper": "gao_han_li_zhou_intraday_momentum.pdf",
+    "started_at": "2026-11-14T12:06:11.746Z",
+    "observations": [
+      {
+        "elapsed_seconds": 1.857,
+        "status": "RUNNING",
+        "variants": []
+      },
+      {
+        "elapsed_seconds": 38.72,
+        "status": "RUNNING",
+        "variants": [
+          {
+            "variant": "A",
+            "status": "RUNNING",
+            "evals_passed": 0
+          },
+          {
+            "variant": "B",
+            "status": "RUNNING",
+            "evals_passed": 0
+          },
+          {
+            "variant": "C",
+            "status": "RUNNING",
+            "evals_passed": 0
+          }
+        ]
+      },
+      {
+        "elapsed_seconds": 160.854,
+        "status": "RUNNING",
+        "variants": [
+          {
+            "variant": "A",
+            "status": "FAILED_EVAL_2",
+            "evals_passed": 1
+          },
+          {
+            "variant": "B",
+            "status": "FAILED_EVAL_2",
+            "evals_passed": 1
+          },
+          {
+            "variant": "C",
+            "status": "FAILED_EVAL_2",
+            "evals_passed": 1
+          }
+        ]
+      },
+      {
+        "elapsed_seconds": 171.528,
+        "status": "COMPLETED",
+        "variants": [
+          {
+            "variant": "A",
+            "status": "FAILED_EVAL_2",
+            "evals_passed": 1
+          },
+          {
+            "variant": "B",
+            "status": "FAILED_EVAL_2",
+            "evals_passed": 1
+          },
+          {
+            "variant": "C",
+            "status": "FAILED_EVAL_2",
+            "evals_passed": 1
+          }
+        ]
+      }
+    ],
+    "stream": [
+      {
+        "seq": 271,
+        "run_id": "r_55eebea2c07d",
+        "stage": "extract",
+        "status": "started",
+        "variant": null
+      },
+      {
+        "seq": 272,
+        "run_id": "r_55eebea2c07d",
+        "stage": "extract",
+        "status": "passed",
+        "variant": null
+      },
+      {
+        "seq": 273,
+        "run_id": "r_55eebea2c07d",
+        "stage": "data",
+        "status": "started",
+        "variant": null
+      },
+      {
+        "seq": 274,
+        "run_id": "r_55eebea2c07d",
+        "stage": "data",
+        "status": "passed",
+        "variant": null
+      },
+      {
+        "seq": 275,
+        "run_id": "r_55eebea2c07d",
+        "stage": "worker",
+        "status": "started",
+        "variant": "A"
+      },
+      {
+        "seq": 276,
+        "run_id": "r_55eebea2c07d",
+        "stage": "worker",
+        "status": "started",
+        "variant": "B"
+      },
+      {
+        "seq": 277,
+        "run_id": "r_55eebea2c07d",
+        "stage": "worker",
+        "status": "started",
+        "variant": "C"
+      },
+      {
+        "seq": 278,
+        "run_id": "r_55eebea2c07d",
+        "stage": "worker",
+        "status": "passed",
+        "variant": "A"
+      },
+      {
+        "seq": 279,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "passed",
+        "variant": "A"
+      },
+      {
+        "seq": 280,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "started",
+        "variant": "A"
+      },
+      {
+        "seq": 281,
+        "run_id": "r_55eebea2c07d",
+        "stage": "worker",
+        "status": "passed",
+        "variant": "B"
+      },
+      {
+        "seq": 282,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "passed",
+        "variant": "B"
+      },
+      {
+        "seq": 283,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "started",
+        "variant": "B"
+      },
+      {
+        "seq": 284,
+        "run_id": "r_55eebea2c07d",
+        "stage": "worker",
+        "status": "passed",
+        "variant": "C"
+      },
+      {
+        "seq": 285,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "C"
+      },
+      {
+        "seq": 286,
+        "run_id": "r_55eebea2c07d",
+        "stage": "heal",
+        "status": "started",
+        "variant": "C"
+      },
+      {
+        "seq": 287,
+        "run_id": "r_55eebea2c07d",
+        "stage": "heal",
+        "status": "passed",
+        "variant": "C"
+      },
+      {
+        "seq": 288,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "passed",
+        "variant": "C"
+      },
+      {
+        "seq": 289,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "started",
+        "variant": "C"
+      },
+      {
+        "seq": 290,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "passed",
+        "variant": "A"
+      },
+      {
+        "seq": 291,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "A"
+      },
+      {
+        "seq": 292,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "A"
+      },
+      {
+        "seq": 293,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "A"
+      },
+      {
+        "seq": 294,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "A"
+      },
+      {
+        "seq": 295,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "passed",
+        "variant": "B"
+      },
+      {
+        "seq": 296,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "B"
+      },
+      {
+        "seq": 297,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "B"
+      },
+      {
+        "seq": 298,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "B"
+      },
+      {
+        "seq": 299,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "B"
+      },
+      {
+        "seq": 300,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "passed",
+        "variant": "C"
+      },
+      {
+        "seq": 301,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "C"
+      },
+      {
+        "seq": 302,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "C"
+      },
+      {
+        "seq": 303,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "C"
+      },
+      {
+        "seq": 304,
+        "run_id": "r_55eebea2c07d",
+        "stage": "eval",
+        "status": "failed",
+        "variant": "C"
+      },
+      {
+        "seq": 305,
+        "run_id": "r_55eebea2c07d",
+        "stage": "critic",
+        "status": "started",
+        "variant": "A"
+      },
+      {
+        "seq": 306,
+        "run_id": "r_55eebea2c07d",
+        "stage": "critic",
+        "status": "passed",
+        "variant": "A"
+      },
+      {
+        "seq": 307,
+        "run_id": "r_55eebea2c07d",
+        "stage": "critic",
+        "status": "started",
+        "variant": "B"
+      },
+      {
+        "seq": 308,
+        "run_id": "r_55eebea2c07d",
+        "stage": "critic",
+        "status": "passed",
+        "variant": "B"
+      },
+      {
+        "seq": 309,
+        "run_id": "r_55eebea2c07d",
+        "stage": "critic",
+        "status": "started",
+        "variant": "C"
+      },
+      {
+        "seq": 310,
+        "run_id": "r_55eebea2c07d",
+        "stage": "critic",
+        "status": "passed",
+        "variant": "C"
+      },
+      {
+        "seq": 311,
+        "run_id": "r_55eebea2c07d",
+        "stage": "done",
+        "status": "passed",
+        "variant": null
+      }
+    ],
+    "status": "COMPLETED",
+    "wall_seconds": 167.70591816690285,
+    "estimated_model_cost_usd": 0.6992345,
+    "cost_complete": true,
+    "variants": [
+      {
+        "variant": "A",
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1,
+        "test_type": "transfer",
+        "days_traded": 441,
+        "activity": {
+          "IS": {
+            "active_bars": 13230,
+            "total_bars": 175446,
+            "days_traded": 441,
+            "target_active_bars": 13230
+          },
+          "OOS": {
+            "active_bars": 4410,
+            "total_bars": 58482,
+            "days_traded": 147,
+            "target_active_bars": 4410
+          }
+        }
+      },
+      {
+        "variant": "B",
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1,
+        "test_type": "transfer",
+        "days_traded": 441,
+        "activity": {
+          "IS": {
+            "active_bars": 13230,
+            "total_bars": 175446,
+            "days_traded": 441,
+            "target_active_bars": 13230
+          },
+          "OOS": {
+            "active_bars": 4410,
+            "total_bars": 58482,
+            "days_traded": 147,
+            "target_active_bars": 4410
+          }
+        }
+      },
+      {
+        "variant": "C",
+        "status": "FAILED_EVAL_2",
+        "evals_passed": 1,
+        "test_type": "transfer",
+        "days_traded": 179,
+        "activity": {
+          "IS": {
+            "active_bars": 5370,
+            "total_bars": 175446,
+            "days_traded": 179,
+            "target_active_bars": 5370
+          },
+          "OOS": {
+            "active_bars": 1830,
+            "total_bars": 58482,
+            "days_traded": 61,
+            "target_active_bars": 1830
+          }
+        }
+      }
+    ],
+    "screenshot": "report/wo08-browser/10-new-run-completed.png"
+  },
+  "finished_at": "2026-11-14T12:09:04.571Z",
+  "passed": true
+}

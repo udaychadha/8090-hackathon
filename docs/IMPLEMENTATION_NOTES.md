@@ -28,3 +28,5 @@ None pending yet.
   approval/edit stages remain disabled because their backends do not exist.
 - The acceptance run uses the already approved local Gao et al. paper. It starts
   through the interface and uses the existing configured models and pricing.
+- Acceptance completed as `r_55eebea2c07d`; no further owner input was needed.
+  Detailed proof and all screenshot links are in `report/wo08-acceptance.md`.

@@ -1,0 +1,118 @@
+{
+  "started_at": "2026-11-14T12:03:33.150Z",
+  "base": "http://127.0.0.1:5173",
+  "screens": [
+    {
+      "name": "1-run",
+      "route": "/runs/r_ffbba23dbcff",
+      "title": "Run r_ffbba23dbcff",
+      "screenshot": "report/wo08-browser/1-run.png"
+    },
+    {
+      "name": "2-leaderboard",
+      "route": "/leaderboard",
+      "title": "Leaderboard",
+      "screenshot": "report/wo08-browser/2-leaderboard.png"
+    },
+    {
+      "name": "3-tearsheet",
+      "route": "/variants/r_ffbba23dbcff_A",
+      "title": "Another look at trading costs and short-term reversal profits · A",
+      "screenshot": "report/wo08-browser/3-tearsheet.png"
+    },
+    {
+      "name": "4-graveyard",
+      "route": "/graveyard",
+      "title": "Graveyard",
+      "screenshot": "report/wo08-browser/4-graveyard.png"
+    },
+    {
+      "name": "5-new-run",
+      "route": "/new",
+      "title": "New run",
+      "screenshot": "report/wo08-browser/5-new-run.png"
+    },
+    {
+      "name": "6-evals",
+      "route": "/evals",
+      "title": "Evals",
+      "screenshot": "report/wo08-browser/6-evals.png"
+    },
+    {
+      "name": "7-data",
+      "route": "/data",
+      "title": "Data",
+      "screenshot": "report/wo08-browser/7-data.png"
+    }
+  ],
+  "runs": [
+    {
+      "run_id": "r_ffbba23dbcff",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_ffbba23dbcff.png"
+    },
+    {
+      "run_id": "r_e7094212a558",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_e7094212a558.png"
+    },
+    {
+      "run_id": "r_d1b6cda53684",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_d1b6cda53684.png"
+    },
+    {
+      "run_id": "r_b8116b8c72ef",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_b8116b8c72ef.png"
+    },
+    {
+      "run_id": "r_654a63b4217c",
+      "status": "FAILED",
+      "variants": 0,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_654a63b4217c.png"
+    },
+    {
+      "run_id": "r_449ef7fd3ae6",
+      "status": "VOID",
+      "variants": 3,
+      "voided": true,
+      "screenshot": "report/wo08-browser/run-r_449ef7fd3ae6.png"
+    },
+    {
+      "run_id": "r_275efbdfa468",
+      "status": "FAILED",
+      "variants": 0,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_275efbdfa468.png"
+    },
+    {
+      "run_id": "r_17ac8caf8a59",
+      "status": "COMPLETED",
+      "variants": 3,
+      "voided": false,
+      "screenshot": "report/wo08-browser/run-r_17ac8caf8a59.png"
+    }
+  ],
+  "errors": [],
+  "baseline": {
+    "visible_runs": 7,
+    "retained_runs": 8,
+    "visible_variants": 15,
+    "verified": 0
+  },
+  "filters_and_evidence_checked": true,
+  "audit_toggle_verified": true,
+  "mobile_checked": true,
+  "finished_at": "2026-11-14T12:04:10.915Z",
+  "passed": true
+}
